@@ -8,6 +8,7 @@
 #include "entity.h"
 #include <unistd.h>
 #include <cmath>
+#include <bitset>
 
 using std::string;
 using std::vector;
@@ -16,9 +17,13 @@ using std::vector;
 #define MUTATION_RATE             	0.001
 #define EATER_POP_SIZE              10
 #define PLANT_POP_SIZE              4
-#define GENE_COUNT             	  	128
+
+
+#define GENE_COUNT             	  	256
 #define GENE_LENGTH               	5
-#define CHROMO_LENGTH				GENE_COUNT*GENE_LENGTH
+#define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
+
+
 #define MAX_ALLOWABLE_GENERATIONS	400
 #define WORLD_SIZE 					12
 
@@ -29,7 +34,6 @@ using std::vector;
 
 
 string  		GetRandomBits(int length);
-float   		CalculateFitness(string bits);
 //string  		Roulette(int total_fitness, population pop);
 
 void    		Mutate(string &bits);
@@ -37,8 +41,6 @@ void   			Crossover(string &offspring1, string &offspring2);
 int 			GetRandomLocation();
 vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]);
 
-//vector<string> 	PopulationToStrings(population pop, vector<string> world);
-//population 		CreatePopulation(int pop_size, string type, Chromosome *gene_pool);
 
 
 int main() {
@@ -60,16 +62,25 @@ int main() {
 
 	for (int i=0; i<EATER_POP_SIZE; i++) {
 
+
 		tmp_chrm = Chromosome(GetRandomBits(CHROMO_LENGTH), 0.0f, CHROMO_LENGTH);
+
 		tmp_ent = Entity("eater", tmp_chrm);
+		tmp_ent.genes.BitsToRules();
 
 		do {
 			x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 			y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
-		} while(world[x][y].type != "none");
+		} while(world[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
 
 		world[x][y] = tmp_ent;
 
+		//print out the first eater's genes, alongside the number encoding the plants in view cat'd with the state
+		if (i==0){
+			for(int j=0; j<GENE_COUNT; j++) {
+				std::cout << j << ": " << tmp_ent.genes.rules[std::bitset<6>(j).to_string()] << std::endl;
+			}
+		}
 
 	}
 
@@ -94,11 +105,6 @@ int main() {
 
 }
 
-// My algorithm for whatever "game" or thing I want to simulate
-// Likely will take inputs beyond the genes
-float CalculateFitness(string bits) {
-    
-}
 
 vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]) {
 	int x,y;
@@ -144,7 +150,7 @@ string	GetRandomBits(int length) {
 	return bits;
 }
 
-void Mutate(string &bits) {
+/*void Mutate(string &bits) {
 	for (int i=0; i<bits.length(); i++) {
 		if (RANDOM_NUM < MUTATION_RATE) {
 			if (bits.at(i) == '1')
@@ -174,7 +180,7 @@ void Crossover(string &offspring1, string &offspring2) {
   }
 }
 
-/*string Roulette(int total_fitness, population Population) {
+string Roulette(int total_fitness, population Population) {
 	//generate a random number between 0 & total fitness count
 	float Slice = (float)(RANDOM_NUM * total_fitness);
 	
