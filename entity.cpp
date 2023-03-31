@@ -3,7 +3,8 @@
 using std::string;
 
 Entity::Entity() {
-    this->type = "eater";
+    //this->type = "eater";
+    this->type = "none";
 }
 
 Entity::Entity(string t) {

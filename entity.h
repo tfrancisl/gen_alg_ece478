@@ -9,7 +9,7 @@ public:
     Entity();
     Entity(string t);
     Entity(string t, Chromosome g);
-    friend bool operator<(const Entity &l, const Entity &r);
+    //friend bool operator<(const Entity &l, const Entity &r);
     Chromosome genes;
     //int x,y;
     string type;
@@ -17,5 +17,5 @@ public:
 };
 
 
-bool operator<(const Entity &l, const Entity &r);
+//bool operator<(const Entity &l, const Entity &r);
 #endif

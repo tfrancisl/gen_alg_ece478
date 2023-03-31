@@ -1,2 +1,8 @@
+!*.cpp
+!*.h
+!Makefile
+!README.md
+
+
 *.o
 ga_tutorial.cpp
