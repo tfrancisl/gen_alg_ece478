@@ -16,16 +16,16 @@ using std::vector;
 #define CROSSOVER_RATE            	0.7
 #define MUTATION_RATE             	0.001
 #define EATER_POP_SIZE              10
-#define PLANT_POP_SIZE              4
+#define PLANT_POP_SIZE              5
 
 
 #define GENE_COUNT             	  	256
-#define GENE_LENGTH               	5
+#define GENE_LENGTH               	4
 #define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
 
+#define WORLD_SIZE 					15
+#define DAYS_PER_GENERATION 		100
 
-#define MAX_ALLOWABLE_GENERATIONS	400
-#define WORLD_SIZE 					12
 
 //returns a float between 0 & 1
 #define RANDOM_NUM		((float)rand()/((float)(RAND_MAX)+1))
@@ -40,7 +40,11 @@ void    		Mutate(string &bits);
 void   			Crossover(string &offspring1, string &offspring2);
 int 			GetRandomLocation();
 vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]);
+void 			ProgressTime();
 
+
+int time_step = 0; //current "day"
+Entity world[WORLD_SIZE][WORLD_SIZE];
 
 
 int main() {
@@ -48,7 +52,7 @@ int main() {
 	srand((int)time(NULL));
 	int x,y;
 
-	Entity world[WORLD_SIZE][WORLD_SIZE];
+	
 	Entity eater_population[EATER_POP_SIZE];
 	Entity plant_population[PLANT_POP_SIZE];
 
@@ -59,13 +63,13 @@ int main() {
 
 
 	//create the eaters and place them in the world
-
 	for (int i=0; i<EATER_POP_SIZE; i++) {
 
 
 		tmp_chrm = Chromosome(GetRandomBits(CHROMO_LENGTH), 0.0f, CHROMO_LENGTH);
 
 		tmp_ent = Entity("eater", tmp_chrm);
+		tmp_ent.state = GetRandomBits(2);	//need a random starting state
 		tmp_ent.genes.BitsToRules();
 
 		do {
@@ -76,12 +80,11 @@ int main() {
 		world[x][y] = tmp_ent;
 
 		//print out the first eater's genes, alongside the number encoding the plants in view cat'd with the state
-		if (i==0){
+		/*if (i==0){
 			for(int j=0; j<GENE_COUNT; j++) {
 				std::cout << j << ": " << tmp_ent.genes.rules[std::bitset<6>(j).to_string()] << std::endl;
 			}
-		}
-
+		}*/
 	}
 
 	//create the plants and place them in the world
@@ -96,17 +99,131 @@ int main() {
 		world[x][y] = tmp_ent;
 	}
 
-	str_world = WorldToStrings(world);
+	//do one generation
 
-	for (int i = 0; i<WORLD_SIZE; i++) {
-		std::cout << str_world[i] << std::endl;
+	for (int d=0; d<DAYS_PER_GENERATION; d++) {
+		ProgressTime();
 	}
-	std::cout << std::endl;
+
+
 
 }
 
+// Progress time in the world.
+// Going left-to-right and top-to-bottom, check the entity in each grid square
+// If they're an eater, check the 4 nearby grids for plants. Concat these 4 bits with
+// the 4 bits of the current state, then key into the map to check the action and next state.
+// Take the action (if possible), and change to the next state. Move on.
+// Presently, plants do nothing and "none" squares do nothing
+void ProgressTime() {
+	int x,y,m;
+	string view,rule_key,rule,mvmt;
+	//	bit     3    2    1    0
+ 	//  wpos    7    5    3    1
+	//  x       -    0    +    0
+	//  y       0    +    0    -
+	std::bitset<4> view_bits(0); 
+	float max_fitness = 0.0f;
 
-vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]) {
+	std::cout << "time: " << time_step << std::endl;
+
+	for (x=0; x<WORLD_SIZE; x++) {
+		for (y=0; y<WORLD_SIZE; y++) {
+			if(world[x][y].type == "eater" && world[x][y].last_action != time_step) {
+
+				//std::cout << "time: " << time_step << std::endl;
+				//std::cout << "current ent last action: " << world[x][y].last_action << std::endl;
+				world[x][y].last_action = time_step;	//only one action allowed per day so keep these together
+
+				if (x != WORLD_SIZE-1) {
+					if (world[x+1][y].type == "plant")
+						view_bits.set(1);
+				} else if (x != 0) {
+					if (world[x-1][y].type == "plant")
+						view_bits.set(3);
+				}
+				if (y != WORLD_SIZE-1) {
+					if (world[x][y+1].type == "plant")
+						view_bits.set(2);
+				} else if (y != 0) {
+					if (world[x][y-1].type == "plant")
+						view_bits.set(0);
+				}
+
+
+				view = view_bits.to_string();
+				rule_key = view + world[x][y].state; 	//thanks string concatenation
+				rule = world[x][y].genes.rules[rule_key];
+				mvmt = rule.substr(0, 2);			 	//get movement out of the rule
+				world[x][y].state = rule.substr(2, 2);	//update the eater's state regardless
+
+				m = std::stoi(mvmt, NULL, 2);
+				//std::cout << m << std::endl;
+
+				//should find some alternative logic here - switch/case/break is not great
+				switch(m) {
+					case 0:
+						if( !(y-1 < 0) ) {
+							if(world[x][y-1].type == "plant") {
+								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								world[x][y-1] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							} else if(world[x][y-1].type == "none") {
+								world[x][y-1] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							}
+						}	
+						break;
+					case 1:
+						if( !(x+1 > WORLD_SIZE-1) )  {
+							if(world[x+1][y].type == "plant") {
+								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								world[x+1][y] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							} else if(world[x+1][y].type == "none") {
+								world[x+1][y] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							}
+						}
+						break;
+					case 2:
+						if( !(y+1 > WORLD_SIZE-1) ) {
+							if(world[x][y+1].type == "plant") {
+								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								world[x][y+1] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							} else if(world[x][y+1].type == "none") {
+								world[x][y+1] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							}
+						}
+						break;
+					case 3:
+						if( !(x-1 < 0) ) {
+							if(world[x-1][y].type == "plant") {
+								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								world[x-1][y] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							} else if(world[x-1][y].type == "none") {
+								world[x-1][y] = world[x][y]; 			//move the eater
+								world[x][y] = Entity();					//replace the eater with nothing
+							}
+						}
+						break;
+				}
+
+				
+
+			}
+		}
+	}
+
+
+	time_step++;	//increment time step
+}
+
+
+vector<string> WorldToStrings(Entity w[WORLD_SIZE][WORLD_SIZE]) {
 	int x,y;
 	string ent_sym;
 	vector<string> str_world = vector<string>(WORLD_SIZE, string(WORLD_SIZE, '.'));
@@ -114,11 +231,11 @@ vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]) {
 	for (x=0; x< WORLD_SIZE; x++) {
 		for (y=0; y< WORLD_SIZE; y++) {
 			
-			if (world[x][y].type == "eater") {
+			if (w[x][y].type == "eater") {
 				ent_sym = "T";
-			} else if(world[x][y].type == "plant") { 
+			} else if(w[x][y].type == "plant") { 
 				ent_sym = "P";
-			} else if(world[x][y].type == "none") {
+			} else if(w[x][y].type == "none") {
 				ent_sym = ".";
 			} else { //error case
 				ent_sym = "X";
@@ -128,6 +245,11 @@ vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]) {
 
 		}
 	}
+
+	for (int i = 0; i<WORLD_SIZE; i++) {
+		std::cout << str_world[i] << std::endl;
+	}
+	std::cout << std::endl;
 
 	return str_world;
 }

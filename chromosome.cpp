@@ -7,12 +7,12 @@ using std::vector;
 
 
 #define GENE_COUNT             	  	256
-#define GENE_LENGTH               	5
+#define GENE_LENGTH               	4
 #define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
 
 Chromosome::Chromosome(){
     this->bits = "";
-    this->fitness = 0.0f;
+    this->fitness = 1.0f;
     this->length = CHROMO_LENGTH;
 }
 

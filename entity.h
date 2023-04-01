@@ -9,13 +9,15 @@ public:
     Entity();
     Entity(string t);
     Entity(string t, Chromosome g);
-    //friend bool operator<(const Entity &l, const Entity &r);
     Chromosome genes;
-    //int x,y;
+
+    int last_action;  //what time step was their last action taken on?
     string type;
-    string state;
+
+    //string view;   //4 bits, up to 4 plants in view (spots 1,3,5,7)
+    string state;  //should look different for different genetic entities
+                   //for eater: 2 bits total
 };
 
 
-//bool operator<(const Entity &l, const Entity &r);
 #endif
