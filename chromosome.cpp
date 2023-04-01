@@ -6,9 +6,7 @@ using std::string;
 using std::vector;
 
 
-#define GENE_COUNT             	  	256
-#define GENE_LENGTH               	4
-#define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
+
 
 Chromosome::Chromosome(){
     this->bits = "";
@@ -37,8 +35,12 @@ void Chromosome::BitsToRules() {
 
     for(int i=0; i<GENE_COUNT; i++) {
         for (int j=0; j<GENE_LENGTH; j++) {
+            if (bits.length() == 0) {
+                std::cout << "error gene length 0 " << std::endl;
+            }
+
             val = bits.substr(i*j, GENE_LENGTH);
-            key = std::bitset<4+2>(i).to_string(); 
+            key = std::bitset<4+STATE_SIZE>(i).to_string(); 
             rules[key] = val; 
 
         }

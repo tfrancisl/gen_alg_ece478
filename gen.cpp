@@ -12,52 +12,57 @@
 
 using std::string;
 using std::vector;
+using std::array;
 
 #define CROSSOVER_RATE            	0.7
 #define MUTATION_RATE             	0.001
-#define EATER_POP_SIZE              10
-#define PLANT_POP_SIZE              5
+#define EATER_POP_SIZE              50
+#define PLANT_POP_SIZE              250
 
 
-#define GENE_COUNT             	  	256
-#define GENE_LENGTH               	4
-#define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
+//#define GENE_COUNT             	  	4*256
+//#define STATE_SIZE                  4
+//#define GENE_LENGTH               	(2+STATE_SIZE)
+//#define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
 
-#define WORLD_SIZE 					15
-#define DAYS_PER_GENERATION 		100
+#define WORLD_SIZE 					25
+#define DAYS_PER_GENERATION 		365
+#define GENERATIONS					1001
 
 
 //returns a float between 0 & 1
 #define RANDOM_NUM		((float)rand()/((float)(RAND_MAX)+1))
 
-//typedef std::map<vector<int>, Entity> population;
-
-
 string  		GetRandomBits(int length);
-//string  		Roulette(int total_fitness, population pop);
+string  	Roulette(int total_fitness, vector<Entity> population);
 
 void    		Mutate(string &bits);
 void   			Crossover(string &offspring1, string &offspring2);
 int 			GetRandomLocation();
 vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]);
-void 			ProgressTime();
+float 			ProgressTime();
 
 
 int time_step = 0; //current "day"
-Entity world[WORLD_SIZE][WORLD_SIZE];
+//Entity world[WORLD_SIZE][WORLD_SIZE];
+array<array<Entity, WORLD_SIZE>, WORLD_SIZE> world;
 
 
 int main() {
     //seed the random number generator
 	srand((int)time(NULL));
 	int x,y;
+	float max_fitness = 0.0f,total_fitness = 0.0f,last_ten_fitness = 0.0f;
 
 	
-	Entity eater_population[EATER_POP_SIZE];
-	Entity plant_population[PLANT_POP_SIZE];
+	//Entity eater_population[EATER_POP_SIZE];
+	//Entity plant_population[PLANT_POP_SIZE];
+	vector<Entity> eater_population(EATER_POP_SIZE);
+	vector<Entity> tmp_eater_population(EATER_POP_SIZE);
 
-	Entity tmp_ent;
-	Chromosome tmp_chrm;
+	string genes1,genes2;
+	Entity tmp_ent, child1, child2;
+	Chromosome tmp_chrm,new_chrm1,new_chrm2;
 
 	vector<string> str_world;
 
@@ -69,7 +74,7 @@ int main() {
 		tmp_chrm = Chromosome(GetRandomBits(CHROMO_LENGTH), 0.0f, CHROMO_LENGTH);
 
 		tmp_ent = Entity("eater", tmp_chrm);
-		tmp_ent.state = GetRandomBits(2);	//need a random starting state
+		tmp_ent.state = GetRandomBits(STATE_SIZE);	//need a random starting state
 		tmp_ent.genes.BitsToRules();
 
 		do {
@@ -79,10 +84,9 @@ int main() {
 
 		world[x][y] = tmp_ent;
 
-		//print out the first eater's genes, alongside the number encoding the plants in view cat'd with the state
 		/*if (i==0){
 			for(int j=0; j<GENE_COUNT; j++) {
-				std::cout << j << ": " << tmp_ent.genes.rules[std::bitset<6>(j).to_string()] << std::endl;
+				std::cout << j << ": " << tmp_ent.genes.rules[std::bitset<4+STATE_SIZE>(j).to_string()] << std::endl;
 			}
 		}*/
 	}
@@ -101,11 +105,108 @@ int main() {
 
 	//do one generation
 
-	for (int d=0; d<DAYS_PER_GENERATION; d++) {
-		ProgressTime();
+	/////////////////////////////////////////////////////////
+	for(int g=0; g<GENERATIONS; g++) {
+		tmp_eater_population.clear();
+		eater_population.clear();
+
+		for (int d=0; d<DAYS_PER_GENERATION; d++) {
+			max_fitness = ProgressTime();
+		}
+
+		
+
+		total_fitness = 0.0f;
+		for (x=0; x<WORLD_SIZE; x++) {
+			for (y=0; y<WORLD_SIZE; y++) {
+				if(world[x][y].type == "eater") {
+					total_fitness += world[x][y].genes.fitness;
+					eater_population.push_back(world[x][y]);
+				}
+			}
+		}
+		last_ten_fitness += total_fitness;
+
+		//std::cout << "Max fitness after generation " << g << ": " << max_fitness << std::endl;
+		if (g!=0 && g%10 == 0) { 
+			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)EATER_POP_SIZE << " avg fitness" << std::endl;
+			std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << last_ten_fitness/(float)(10.0*EATER_POP_SIZE) << " avg fitness (10 gens)" << std::endl;
+			last_ten_fitness = 0.0f;
+		} else if (g<10) {
+			std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)(EATER_POP_SIZE) << " avg fitness" << std::endl;
+		}
+		//std::cout << "Total fitness in generation " << g << ": " << total_fitness << std::endl;
+
+		for (int i=0; i<EATER_POP_SIZE/2; i++) {
+			//Select two
+			genes1 = Roulette(total_fitness, eater_population);
+			genes2 = Roulette(total_fitness, eater_population);
+
+			//crossover
+			Crossover(genes1, genes2);
+			
+			//mutate
+			Mutate(genes1);
+			Mutate(genes2);
+
+			new_chrm1 = Chromosome(genes1, 0.0f, CHROMO_LENGTH); 
+			new_chrm2 = Chromosome(genes2, 0.0f, CHROMO_LENGTH); 
+
+			//set up the new entity
+			child1 = Entity("eater", new_chrm1);
+			child1.state = GetRandomBits(STATE_SIZE);
+			child1.genes.BitsToRules();
+			child2 = Entity("eater", new_chrm2);
+			child2.state = GetRandomBits(STATE_SIZE);
+			child2.genes.BitsToRules();
+			
+			tmp_eater_population.push_back(child1);
+			tmp_eater_population.push_back(child2);
+		}
+
+		//clear out the world?
+		world = array<array<Entity, WORLD_SIZE>, WORLD_SIZE>();
+
+		//place the new population into the world
+		for (int i=0; i<EATER_POP_SIZE; i++) {
+			do {
+				x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+				y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+			} while(world[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
+
+			world[x][y] = tmp_eater_population[i];
+		}
+
+
+		//create the plants and place them in the world
+		for (int i=0; i<PLANT_POP_SIZE; i++) {
+			tmp_ent = Entity("plant");
+
+			do {
+				x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+				y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+			} while(world[x][y].type != "none");
+
+			world[x][y] = tmp_ent;
+		}
 	}
+	///////////////////////////////////////////////////////////////
 
 
+}
+
+
+//When an eater eats a plant, the plant should respawn somewhere else.
+void RespawnPlant() {
+	int x,y;
+	Entity tmp_ent = Entity("plant");
+
+	do {
+		x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+		y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+	} while(world[x][y].type != "none");
+
+	world[x][y] = tmp_ent;
 
 }
 
@@ -115,7 +216,7 @@ int main() {
 // the 4 bits of the current state, then key into the map to check the action and next state.
 // Take the action (if possible), and change to the next state. Move on.
 // Presently, plants do nothing and "none" squares do nothing
-void ProgressTime() {
+float ProgressTime() {
 	int x,y,m;
 	string view,rule_key,rule,mvmt;
 	//	bit     3    2    1    0
@@ -125,7 +226,7 @@ void ProgressTime() {
 	std::bitset<4> view_bits(0); 
 	float max_fitness = 0.0f;
 
-	std::cout << "time: " << time_step << std::endl;
+	//std::cout << "time: " << time_step << std::endl;
 
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
@@ -153,12 +254,20 @@ void ProgressTime() {
 
 				view = view_bits.to_string();
 				rule_key = view + world[x][y].state; 	//thanks string concatenation
+
+				//std::cout << "rule key: " << rule_key << std::endl;
 				rule = world[x][y].genes.rules[rule_key];
+				//std::cout << "rule: " << rule << std::endl;
+
 				mvmt = rule.substr(0, 2);			 	//get movement out of the rule
-				world[x][y].state = rule.substr(2, 2);	//update the eater's state regardless
+				world[x][y].state = rule.substr(2, STATE_SIZE);	//update the eater's state regardless
 
 				m = std::stoi(mvmt, NULL, 2);
 				//std::cout << m << std::endl;
+
+				if (max_fitness < world[x][y].genes.fitness) {
+					max_fitness = world[x][y].genes.fitness;
+				}
 
 				//should find some alternative logic here - switch/case/break is not great
 				switch(m) {
@@ -167,7 +276,8 @@ void ProgressTime() {
 							if(world[x][y-1].type == "plant") {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x][y-1] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
+								world[x][y] = Entity();	
+								RespawnPlant();				
 							} else if(world[x][y-1].type == "none") {
 								world[x][y-1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -180,6 +290,7 @@ void ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x+1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
+								RespawnPlant();
 							} else if(world[x+1][y].type == "none") {
 								world[x+1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -192,6 +303,7 @@ void ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x][y+1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
+								RespawnPlant();
 							} else if(world[x][y+1].type == "none") {
 								world[x][y+1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -204,6 +316,7 @@ void ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x-1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
+								RespawnPlant();
 							} else if(world[x-1][y].type == "none") {
 								world[x-1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -216,10 +329,12 @@ void ProgressTime() {
 
 			}
 		}
+
 	}
 
 
 	time_step++;	//increment time step
+	return max_fitness;
 }
 
 
@@ -272,7 +387,7 @@ string	GetRandomBits(int length) {
 	return bits;
 }
 
-/*void Mutate(string &bits) {
+void Mutate(string &bits) {
 	for (int i=0; i<bits.length(); i++) {
 		if (RANDOM_NUM < MUTATION_RATE) {
 			if (bits.at(i) == '1')
@@ -302,25 +417,27 @@ void Crossover(string &offspring1, string &offspring2) {
   }
 }
 
-string Roulette(int total_fitness, population Population) {
+
+string Roulette(int total_fitness, vector<Entity> population) {
 	//generate a random number between 0 & total fitness count
 	float Slice = (float)(RANDOM_NUM * total_fitness);
-	
+
 	//go through the chromosones adding up the fitness so far
 	float FitnessSoFar = 0.0f;
 	
-	for (population::iterator	 i = Population.begin(); i != Population.end(); ++i)
+	for (vector<Entity>::iterator	 i = population.begin(); i != population.end(); ++i)
 	{
-		//FitnessSoFar += Population[i].fitness;
-		FitnessSoFar += i->second.genes.fitness;
+		FitnessSoFar += i->genes.fitness;
 		
 		//if the fitness so far > random number return the chromo at this point
 		if (FitnessSoFar >= Slice)
 		{
-			return i->second.genes.bits;
+			return i->genes.bits;
 		}
 
 	}
 
+	std::cout << "Failed to select a candidate. Crashing soon :)" << std::endl;
 	return "";
-}*/	
+}
+
