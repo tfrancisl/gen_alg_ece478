@@ -3,6 +3,7 @@
 !Makefile
 !README.md
 
-
+*.csv
+*.png
 *.o
 ga_tutorial.cpp

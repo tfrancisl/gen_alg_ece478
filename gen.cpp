@@ -9,26 +9,11 @@
 #include <unistd.h>
 #include <cmath>
 #include <bitset>
+#include "gen_alg.h"
 
 using std::string;
 using std::vector;
 using std::array;
-
-#define CROSSOVER_RATE            	0.7
-#define MUTATION_RATE             	0.001
-#define EATER_POP_SIZE              50
-#define PLANT_POP_SIZE              250
-
-
-//#define GENE_COUNT             	  	4*256
-//#define STATE_SIZE                  4
-//#define GENE_LENGTH               	(2+STATE_SIZE)
-//#define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
-
-#define WORLD_SIZE 					25
-#define DAYS_PER_GENERATION 		365
-#define GENERATIONS					1001
-
 
 //returns a float between 0 & 1
 #define RANDOM_NUM		((float)rand()/((float)(RAND_MAX)+1))
@@ -103,9 +88,8 @@ int main() {
 		world[x][y] = tmp_ent;
 	}
 
-	//do one generation
-
 	/////////////////////////////////////////////////////////
+	std::cout << "generation,max_fitness,avg_fitness,avg_fitness_10" << std::endl;
 	for(int g=0; g<GENERATIONS; g++) {
 		tmp_eater_population.clear();
 		eater_population.clear();
@@ -113,8 +97,6 @@ int main() {
 		for (int d=0; d<DAYS_PER_GENERATION; d++) {
 			max_fitness = ProgressTime();
 		}
-
-		
 
 		total_fitness = 0.0f;
 		for (x=0; x<WORLD_SIZE; x++) {
@@ -128,13 +110,15 @@ int main() {
 		last_ten_fitness += total_fitness;
 
 		//std::cout << "Max fitness after generation " << g << ": " << max_fitness << std::endl;
-		if (g!=0 && g%10 == 0) { 
+		//if (g!=0 && g%10 == 0) { 
 			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)EATER_POP_SIZE << " avg fitness" << std::endl;
-			std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << last_ten_fitness/(float)(10.0*EATER_POP_SIZE) << " avg fitness (10 gens)" << std::endl;
-			last_ten_fitness = 0.0f;
-		} else if (g<10) {
-			std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)(EATER_POP_SIZE) << " avg fitness" << std::endl;
-		}
+			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << last_ten_fitness/(float)(10.0*EATER_POP_SIZE) << " avg fitness (10 gens)" << std::endl;
+		//	std::cout << g << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << last_ten_fitness/(float)(10.0*EATER_POP_SIZE) << std::endl;
+		//	last_ten_fitness = 0.0f;
+		//} else if (g<10) {
+			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)(EATER_POP_SIZE) << " avg fitness" << std::endl;
+			std::cout << g << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << std::endl;
+		//}
 		//std::cout << "Total fitness in generation " << g << ": " << total_fitness << std::endl;
 
 		for (int i=0; i<EATER_POP_SIZE/2; i++) {

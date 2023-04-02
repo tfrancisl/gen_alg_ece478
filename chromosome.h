@@ -4,15 +4,10 @@
 #include <map>
 #include <iostream>
 #include <math.h>
+#include "gen_alg.h"
 
 using std::string;
 using std::map;
-
-
-#define STATE_SIZE                  4
-#define GENE_COUNT             	  	pow(2,4+STATE_SIZE)
-#define GENE_LENGTH               	(2+STATE_SIZE)
-#define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
 
 class Chromosome {
 
