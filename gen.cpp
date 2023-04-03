@@ -15,6 +15,8 @@ using std::string;
 using std::vector;
 using std::array;
 
+#define MAKE_CSV 1
+
 //returns a float between 0 & 1
 #define RANDOM_NUM		((float)rand()/((float)(RAND_MAX)+1))
 
@@ -24,12 +26,11 @@ string  	Roulette(int total_fitness, vector<Entity> population);
 void    		Mutate(string &bits);
 void   			Crossover(string &offspring1, string &offspring2);
 int 			GetRandomLocation();
-vector<string> WorldToStrings(Entity world[WORLD_SIZE][WORLD_SIZE]);
+vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE>);
 float 			ProgressTime();
 
 
 int time_step = 0; //current "day"
-//Entity world[WORLD_SIZE][WORLD_SIZE];
 array<array<Entity, WORLD_SIZE>, WORLD_SIZE> world;
 
 
@@ -37,11 +38,8 @@ int main() {
     //seed the random number generator
 	srand((int)time(NULL));
 	int x,y;
-	float max_fitness = 0.0f,total_fitness = 0.0f,last_ten_fitness = 0.0f;
+	float max_fitness = 0.0f,total_fitness = 0.0f;
 
-	
-	//Entity eater_population[EATER_POP_SIZE];
-	//Entity plant_population[PLANT_POP_SIZE];
 	vector<Entity> eater_population(EATER_POP_SIZE);
 	vector<Entity> tmp_eater_population(EATER_POP_SIZE);
 
@@ -89,7 +87,10 @@ int main() {
 	}
 
 	/////////////////////////////////////////////////////////
+	#if MAKE_CSV
 	std::cout << "generation,max_fitness,avg_fitness,avg_fitness_10" << std::endl;
+	#endif
+	
 	for(int g=0; g<GENERATIONS; g++) {
 		tmp_eater_population.clear();
 		eater_population.clear();
@@ -107,19 +108,10 @@ int main() {
 				}
 			}
 		}
-		last_ten_fitness += total_fitness;
 
-		//std::cout << "Max fitness after generation " << g << ": " << max_fitness << std::endl;
-		//if (g!=0 && g%10 == 0) { 
-			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)EATER_POP_SIZE << " avg fitness" << std::endl;
-			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << last_ten_fitness/(float)(10.0*EATER_POP_SIZE) << " avg fitness (10 gens)" << std::endl;
-		//	std::cout << g << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << last_ten_fitness/(float)(10.0*EATER_POP_SIZE) << std::endl;
-		//	last_ten_fitness = 0.0f;
-		//} else if (g<10) {
-			//std::cout << "Generation " << g << ": " << max_fitness << " max fitness, " << total_fitness/(float)(EATER_POP_SIZE) << " avg fitness" << std::endl;
-			std::cout << g << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << std::endl;
-		//}
-		//std::cout << "Total fitness in generation " << g << ": " << total_fitness << std::endl;
+		#if MAKE_CSV
+		std::cout << g << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << std::endl;
+		#endif
 
 		for (int i=0; i<EATER_POP_SIZE/2; i++) {
 			//Select two
@@ -143,6 +135,10 @@ int main() {
 			child2 = Entity("eater", new_chrm2);
 			child2.state = GetRandomBits(STATE_SIZE);
 			child2.genes.BitsToRules();
+
+			if (i==0) {
+				child1.spec = 1;
+			}
 			
 			tmp_eater_population.push_back(child1);
 			tmp_eater_population.push_back(child2);
@@ -176,8 +172,20 @@ int main() {
 	}
 	///////////////////////////////////////////////////////////////
 
+	for (int d=0; d<DAYS_PER_GENERATION; d++) {
+		max_fitness = ProgressTime();
+		#if !MAKE_CSV
+		WorldToStrings(world);
+		#endif
+	}
+
+	
+
 
 }
+
+
+
 
 
 //When an eater eats a plant, the plant should respawn somewhere else.
@@ -185,12 +193,30 @@ void RespawnPlant() {
 	int x,y;
 	Entity tmp_ent = Entity("plant");
 
+
 	do {
 		x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 		y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 	} while(world[x][y].type != "none");
 
 	world[x][y] = tmp_ent;
+
+}
+
+//plant respawns near x1,y1
+void RespawnPlantNearby(int x1, int y1) {
+	int x2,y2;
+	Entity tmp_ent = Entity("plant");
+
+	do {
+		x2 = (int)std::round( x1 + ((RANDOM_NUM-0.5)*(float)(4)));
+		y2 = (int)std::round( y1 + ((RANDOM_NUM-0.5)*(float)(4)));
+		if (x2 < 0) x2 = 0;
+		if (y2 < 0) y2 = 0;
+		if (x2 > WORLD_SIZE-1) x2 = WORLD_SIZE-1;
+		if (y2 > WORLD_SIZE-1) y2 = WORLD_SIZE-1;
+
+	} while(world[x2][y2].type != "none");
 
 }
 
@@ -261,7 +287,8 @@ float ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x][y-1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();	
-								RespawnPlant();				
+								//RespawnPlant();	
+								RespawnPlantNearby(x,y-1);			
 							} else if(world[x][y-1].type == "none") {
 								world[x][y-1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -274,7 +301,8 @@ float ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x+1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
-								RespawnPlant();
+								//RespawnPlant();
+								RespawnPlantNearby(x+1,y);		
 							} else if(world[x+1][y].type == "none") {
 								world[x+1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -287,7 +315,8 @@ float ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x][y+1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
-								RespawnPlant();
+								//RespawnPlant();
+								RespawnPlantNearby(x,y+1);	
 							} else if(world[x][y+1].type == "none") {
 								world[x][y+1] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -300,7 +329,8 @@ float ProgressTime() {
 								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
 								world[x-1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
-								RespawnPlant();
+								//RespawnPlant();
+								RespawnPlantNearby(x-1,y);	
 							} else if(world[x-1][y].type == "none") {
 								world[x-1][y] = world[x][y]; 			//move the eater
 								world[x][y] = Entity();					//replace the eater with nothing
@@ -322,7 +352,7 @@ float ProgressTime() {
 }
 
 
-vector<string> WorldToStrings(Entity w[WORLD_SIZE][WORLD_SIZE]) {
+vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w) {
 	int x,y;
 	string ent_sym;
 	vector<string> str_world = vector<string>(WORLD_SIZE, string(WORLD_SIZE, '.'));
@@ -332,10 +362,14 @@ vector<string> WorldToStrings(Entity w[WORLD_SIZE][WORLD_SIZE]) {
 			
 			if (w[x][y].type == "eater") {
 				ent_sym = "T";
+				if (w[x][y].spec == 1) {
+					ent_sym = "*";
+				}
+
 			} else if(w[x][y].type == "plant") { 
 				ent_sym = "P";
 			} else if(w[x][y].type == "none") {
-				ent_sym = ".";
+				ent_sym = " ";
 			} else { //error case
 				ent_sym = "X";
 			}
@@ -345,9 +379,11 @@ vector<string> WorldToStrings(Entity w[WORLD_SIZE][WORLD_SIZE]) {
 		}
 	}
 
+	std::cout << string(WORLD_SIZE, '-') << std::endl;
 	for (int i = 0; i<WORLD_SIZE; i++) {
 		std::cout << str_world[i] << std::endl;
 	}
+	std::cout << string(WORLD_SIZE, '-') << std::endl;
 	std::cout << std::endl;
 
 	return str_world;
