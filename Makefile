@@ -5,7 +5,7 @@ CFLAGS = -Wall -I.
 LIBS =
 
 $(TARGET): $(OBJS)
-	g++ -o $(TARGET) $(CFLAGS) $(OBJS) $(LIBS)
+	g++ -o $(TARGET) $(CFLAGS) -g $(OBJS) $(LIBS)
 
 clean:
 	rm -f $(OBJS) $(TARGET)

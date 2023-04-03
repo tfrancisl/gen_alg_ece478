@@ -15,7 +15,7 @@ using std::string;
 using std::vector;
 using std::array;
 
-#define MAKE_CSV 1
+#define MAKE_CSV 0
 
 //returns a float between 0 & 1
 #define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))
@@ -26,15 +26,160 @@ using std::array;
 //bitset<CHROMO_LENGTH>  	GetRandomBits(int length);
 bitset<CHROMO_LENGTH>  	Roulette(int total_fitness, vector<Entity> population);
 
-void    		Mutate(bitset<CHROMO_LENGTH> &bits);
-void   			Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspring2);
-int 			GetRandomLocation();
+void Mutate(bitset<CHROMO_LENGTH> &bits);
+void Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspring2);
+int GetRandomLocation();
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE>);
-float 			ProgressTime();
-
 
 int time_step = 0; //current "day"
-array<array<Entity, WORLD_SIZE>, WORLD_SIZE> world;
+
+// Progress time in the world.
+// Going left-to-right and top-to-bottom, check the entity in each grid square
+// If they're an eater, check the 4 nearby grids for plants. Concat these 4 bits with
+// the 4 bits of the current state, then key into the map to check the action and next state.
+// Take the action (if possible), and change to the next state. Move on.
+// Presently, plants do nothing and "none" squares do nothing
+template <class T, long unsigned int N>
+float ProgressTime(array<array<T, N>, N> *world) {
+	int x,y,m;
+	//	bit     3    2    1    0
+ 	//  (*world)pos    7    5    3    1
+	//  x       -    0    +    0
+	//  y       0    +    0    -
+	bitset<4> view(0);
+	bitset<2> mvmt(0);
+	bitset<GENE_LENGTH+2> rule_key(0);
+	bitset<GENE_LENGTH> rule(0);
+	float max_fitness = 0.0f;
+
+	//std::cout << "time: " << time_step << std::endl;
+
+	for (x=0; x<WORLD_SIZE; x++) {
+		for (y=0; y<WORLD_SIZE; y++) {
+			if((*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
+
+				//std::cout << "time: " << time_step << std::endl;
+				//std::cout << "current ent last action: " << world[x][y].last_action << std::endl;
+				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
+
+				if (x != WORLD_SIZE-1) {
+					if ((*world)[x+1][y].type == "plant")
+						view.set(1);
+				} else if (x != 0) {
+					if ((*world)[x-1][y].type == "plant")
+						view.set(3);
+				}
+				if (y != WORLD_SIZE-1) {
+					if ((*world)[x][y+1].type == "plant")
+						view.set(2);
+				} else if (y != 0) {
+					if ((*world)[x][y-1].type == "plant")
+						view.set(0);
+				}
+
+				for (int i=0; i<(2+GENE_LENGTH); i++) {
+					if (i<GENE_LENGTH) {
+						rule_key[i] = (*world)[x][y].state[i];
+					} else {
+						rule_key[i] = view[i-GENE_LENGTH];
+					}
+				}
+
+				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
+				rule = (*world)[x][y].genes.rules[rule_key.to_ulong()];
+				//std::cout << "rule: " << rule << std::endl;
+
+				//mvmt = rule.substr(0, 2);			 	//get movement out of the rule
+				//world[x][y].state = rule.substr(2, STATE_SIZE);	
+				for(int i=0; i<GENE_LENGTH; i++) {
+					if (i<2) {
+						mvmt[i] = rule[i];
+					} else {
+						(*world)[x][y].state[i-2] = rule[i];   //update the eater's state regardless
+					}
+				}
+
+
+				//m = std::stoi(mvmt, NULL, 2);
+				m = mvmt.to_ulong();
+				//std::cout << m << std::endl;
+
+				if (max_fitness < (*world)[x][y].genes.fitness) {
+					max_fitness = (*world)[x][y].genes.fitness;
+				}
+
+				//should find some alternative logic here - switch/case/break is not great
+				switch(m) {
+					case 0:
+						if( !(y-1 < 0) ) {
+							if((*world)[x][y-1].type == "plant") {
+								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								(*world)[x][y-1] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();	
+								//RespawnPlant();	
+								//RespawnPlantNearby(x,y-1);			
+							} else if((*world)[x][y-1].type == "none") {
+								(*world)[x][y-1] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+							}
+						}	
+						break;
+					case 1:
+						if( !(x+1 > WORLD_SIZE-1) )  {
+							if((*world)[x+1][y].type == "plant") {
+								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								(*world)[x+1][y] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+								//RespawnPlant();
+								//RespawnPlantNearby(x+1,y);		
+							} else if((*world)[x+1][y].type == "none") {
+								(*world)[x+1][y] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+							}
+						}
+						break;
+					case 2:
+						if( !(y+1 > WORLD_SIZE-1) ) {
+							if((*world)[x][y+1].type == "plant") {
+								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								(*world)[x][y+1] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+								//RespawnPlant();
+								//RespawnPlantNearby(x,y+1);	
+							} else if((*world)[x][y+1].type == "none") {
+								(*world)[x][y+1] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+							}
+						}
+						break;
+					case 3:
+						if( !(x-1 < 0) ) {
+							if((*world)[x-1][y].type == "plant") {
+								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
+								(*world)[x-1][y] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+								//RespawnPlant();
+								//RespawnPlantNearby(x-1,y);	
+							} else if((*world)[x-1][y].type == "none") {
+								(*world)[x-1][y] = (*world)[x][y]; 			//move the eater
+								(*world)[x][y] = Entity();					//replace the eater with nothing
+							}
+						}
+						break;
+				}
+
+				
+
+			}
+		}
+
+	}
+
+
+	time_step++;	//increment time step
+	return max_fitness;
+}
+//array<array<Entity, WORLD_SIZE>, WORLD_SIZE> world;
 
 
 int main() {
@@ -42,6 +187,8 @@ int main() {
 	srand((int)time(NULL));
 	int x,y;
 	float max_fitness = 0.0f,total_fitness = 0.0f;
+
+	array<array<Entity, WORLD_SIZE>, WORLD_SIZE> *world = new array<array<Entity, WORLD_SIZE>, WORLD_SIZE>;
 
 	vector<Entity> eater_population(EATER_POP_SIZE);
 	vector<Entity> tmp_eater_population(EATER_POP_SIZE);
@@ -76,9 +223,9 @@ int main() {
 		do {
 			x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 			y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
-		} while(world[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
+		} while((*world)[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
 
-		world[x][y] = tmp_ent;
+		(*world)[x][y] = tmp_ent;
 
 		/*if (i==1){
 			std::cout << "first eater state and genetic code " << tmp_ent.state << std::endl;
@@ -96,9 +243,9 @@ int main() {
 		do {
 			x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 			y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
-		} while(world[x][y].type != "none");
+		} while((*world)[x][y].type != "none");
 
-		world[x][y] = tmp_ent;
+		(*world)[x][y] = tmp_ent;
 	}
 
 	/////////////////////////////////////////////////////////
@@ -111,15 +258,15 @@ int main() {
 		eater_population.clear();
 
 		for (int d=0; d<DAYS_PER_GENERATION; d++) {
-			max_fitness = ProgressTime();
+			max_fitness = ProgressTime(world);
 		}
 
 		total_fitness = 0.0f;
 		for (x=0; x<WORLD_SIZE; x++) {
 			for (y=0; y<WORLD_SIZE; y++) {
-				if(world[x][y].type == "eater") {
-					total_fitness += world[x][y].genes.fitness;
-					eater_population.push_back(world[x][y]);
+				if((*world)[x][y].type == "eater") {
+					total_fitness += (*world)[x][y].genes.fitness;
+					eater_population.push_back((*world)[x][y]);
 				}
 			}
 		}
@@ -160,16 +307,18 @@ int main() {
 		}
 
 		//clear out the world
-		world = array<array<Entity, WORLD_SIZE>, WORLD_SIZE>();
+		for (int s=0; s<WORLD_SIZE; s++) {
+			(*world)[s].fill(Entity());
+		}
 
 		//place the new population into the world
 		for (int i=0; i<EATER_POP_SIZE; i++) {
 			do {
 				x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 				y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
-			} while(world[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
+			} while((*world)[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
 
-			world[x][y] = tmp_eater_population[i];
+			(*world)[x][y] = tmp_eater_population[i];
 		}
 
 
@@ -180,17 +329,17 @@ int main() {
 			do {
 				x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
 				y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
-			} while(world[x][y].type != "none");
+			} while((*world)[x][y].type != "none");
 
-			world[x][y] = tmp_ent;
+			(*world)[x][y] = tmp_ent;
 		}
 	}
 	///////////////////////////////////////////////////////////////
 
 	for (int d=0; d<DAYS_PER_GENERATION; d++) {
-		max_fitness = ProgressTime();
+		max_fitness = ProgressTime(world);
 		#if !MAKE_CSV
-		WorldToStrings(world);
+		WorldToStrings(*world);
 		#endif
 	}
 
@@ -201,7 +350,7 @@ int main() {
 
 
 //When an eater eats a plant, the plant should respawn somewhere else.
-void RespawnPlant() {
+/*void RespawnPlant() {
 	int x,y;
 	Entity tmp_ent = Entity("plant");
 
@@ -213,10 +362,10 @@ void RespawnPlant() {
 
 	world[x][y] = tmp_ent;
 
-}
+}*/
 
 //plant respawns near x1,y1
-void RespawnPlantNearby(int x1, int y1) {
+/*void RespawnPlantNearby(int x1, int y1) {
 	int x2,y2;
 	Entity tmp_ent = Entity("plant");
 
@@ -230,154 +379,7 @@ void RespawnPlantNearby(int x1, int y1) {
 
 	} while(world[x2][y2].type != "none");
 
-}
-
-// Progress time in the world.
-// Going left-to-right and top-to-bottom, check the entity in each grid square
-// If they're an eater, check the 4 nearby grids for plants. Concat these 4 bits with
-// the 4 bits of the current state, then key into the map to check the action and next state.
-// Take the action (if possible), and change to the next state. Move on.
-// Presently, plants do nothing and "none" squares do nothing
-float ProgressTime() {
-	int x,y,m;
-	//	bit     3    2    1    0
- 	//  wpos    7    5    3    1
-	//  x       -    0    +    0
-	//  y       0    +    0    -
-	bitset<4> view(0);
-	bitset<2> mvmt(0);
-	bitset<GENE_LENGTH+2> rule_key(0);
-	bitset<GENE_LENGTH> rule(0);
-	float max_fitness = 0.0f;
-
-	//std::cout << "time: " << time_step << std::endl;
-
-	for (x=0; x<WORLD_SIZE; x++) {
-		for (y=0; y<WORLD_SIZE; y++) {
-			if(world[x][y].type == "eater" && world[x][y].last_action != time_step) {
-
-				//std::cout << "time: " << time_step << std::endl;
-				//std::cout << "current ent last action: " << world[x][y].last_action << std::endl;
-				world[x][y].last_action = time_step;	//only one action allowed per day so keep these together
-
-				if (x != WORLD_SIZE-1) {
-					if (world[x+1][y].type == "plant")
-						view.set(1);
-				} else if (x != 0) {
-					if (world[x-1][y].type == "plant")
-						view.set(3);
-				}
-				if (y != WORLD_SIZE-1) {
-					if (world[x][y+1].type == "plant")
-						view.set(2);
-				} else if (y != 0) {
-					if (world[x][y-1].type == "plant")
-						view.set(0);
-				}
-
-				for (int i=0; i<(2+GENE_LENGTH); i++) {
-					if (i<GENE_LENGTH) {
-						rule_key[i] = world[x][y].state[i];
-					} else {
-						rule_key[i] = view[i-GENE_LENGTH];
-					}
-				}
-
-				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
-				rule = world[x][y].genes.rules[rule_key.to_ulong()];
-				//std::cout << "rule: " << rule << std::endl;
-
-				//mvmt = rule.substr(0, 2);			 	//get movement out of the rule
-				//world[x][y].state = rule.substr(2, STATE_SIZE);	
-				for(int i=0; i<GENE_LENGTH; i++) {
-					if (i<2) {
-						mvmt[i] = rule[i];
-					} else {
-						world[x][y].state[i-2] = rule[i];   //update the eater's state regardless
-					}
-				}
-
-
-				//m = std::stoi(mvmt, NULL, 2);
-				m = mvmt.to_ulong();
-				//std::cout << m << std::endl;
-
-				if (max_fitness < world[x][y].genes.fitness) {
-					max_fitness = world[x][y].genes.fitness;
-				}
-
-				//should find some alternative logic here - switch/case/break is not great
-				switch(m) {
-					case 0:
-						if( !(y-1 < 0) ) {
-							if(world[x][y-1].type == "plant") {
-								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								world[x][y-1] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();	
-								//RespawnPlant();	
-								RespawnPlantNearby(x,y-1);			
-							} else if(world[x][y-1].type == "none") {
-								world[x][y-1] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-							}
-						}	
-						break;
-					case 1:
-						if( !(x+1 > WORLD_SIZE-1) )  {
-							if(world[x+1][y].type == "plant") {
-								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								world[x+1][y] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-								//RespawnPlant();
-								RespawnPlantNearby(x+1,y);		
-							} else if(world[x+1][y].type == "none") {
-								world[x+1][y] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-							}
-						}
-						break;
-					case 2:
-						if( !(y+1 > WORLD_SIZE-1) ) {
-							if(world[x][y+1].type == "plant") {
-								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								world[x][y+1] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-								//RespawnPlant();
-								RespawnPlantNearby(x,y+1);	
-							} else if(world[x][y+1].type == "none") {
-								world[x][y+1] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-							}
-						}
-						break;
-					case 3:
-						if( !(x-1 < 0) ) {
-							if(world[x-1][y].type == "plant") {
-								world[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								world[x-1][y] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-								//RespawnPlant();
-								RespawnPlantNearby(x-1,y);	
-							} else if(world[x-1][y].type == "none") {
-								world[x-1][y] = world[x][y]; 			//move the eater
-								world[x][y] = Entity();					//replace the eater with nothing
-							}
-						}
-						break;
-				}
-
-				
-
-			}
-		}
-
-	}
-
-
-	time_step++;	//increment time step
-	return max_fitness;
-}
-
+}*/
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w) {
 	int x,y;
