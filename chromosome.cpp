@@ -9,42 +9,37 @@ using std::vector;
 
 
 Chromosome::Chromosome(){
-    this->bits = "";
+    this->bits = bitset<CHROMO_LENGTH>(0);
     this->fitness = 1.0f;
     this->length = CHROMO_LENGTH;
 }
 
-Chromosome::Chromosome(string b, float f, int l) {
+Chromosome::Chromosome(bitset<CHROMO_LENGTH> b, float f, int l) {
     this->bits = b;
     this->fitness = f;
     this->length = l;
 }
 
 void Chromosome::PrintChromosome() {
-    for (int i=0; i<this->length; i++) {
-            
-        std::cout << this->bits[i];
-    }
-
-    std::cout << std::endl;
+    std::cout << this->bits.to_string() << std::endl;
 }
 
 void Chromosome::BitsToRules() {
-    string key;
-    string val;
+    int key;
+    bitset<GENE_LENGTH> val;
 
     for(int i=0; i<GENE_COUNT; i++) {
-        for (int j=0; j<GENE_LENGTH; j++) {
-            if (bits.length() == 0) {
-                std::cout << "error gene length 0 " << std::endl;
+        //for (int j=0; j<GENE_LENGTH; j++) {
+
+            //val = bits.substr(i*j, GENE_LENGTH);
+            for (int k=0; k<GENE_LENGTH; k++) {
+                val[k] = bits[GENE_LENGTH*i+k];
             }
 
-            val = bits.substr(i*j, GENE_LENGTH);
-            key = std::bitset<4+STATE_SIZE>(i).to_string(); 
+            key = i;
             rules[key] = val; 
 
-        }
+
+        //}
     }
-
-
 }

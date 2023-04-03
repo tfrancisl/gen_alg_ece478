@@ -7,3 +7,4 @@
 *.png
 *.o
 ga_tutorial.cpp
+.vscode

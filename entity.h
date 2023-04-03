@@ -2,6 +2,7 @@
 #define ENTITY_H_
 
 #include "chromosome.h"
+using std::string;
 
 class Entity {
 
@@ -16,7 +17,7 @@ public:
     int spec;
 
     //string view;   //4 bits, up to 4 plants in view (spots 1,3,5,7)
-    string state;  //should look different for different genetic entities
+    bitset<STATE_SIZE> state;  //should look different for different genetic entities
                    //for eater: 2 bits total
 };
 

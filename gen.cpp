@@ -18,13 +18,16 @@ using std::array;
 #define MAKE_CSV 1
 
 //returns a float between 0 & 1
-#define RANDOM_NUM		((float)rand()/((float)(RAND_MAX)+1))
+#define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))
 
-string  		GetRandomBits(int length);
-string  	Roulette(int total_fitness, vector<Entity> population);
+//returns a random integer between 0 and N-1
+#define RANDOM_NUM_RANGE(N)	rand() % (int)N
 
-void    		Mutate(string &bits);
-void   			Crossover(string &offspring1, string &offspring2);
+//bitset<CHROMO_LENGTH>  	GetRandomBits(int length);
+bitset<CHROMO_LENGTH>  	Roulette(int total_fitness, vector<Entity> population);
+
+void    		Mutate(bitset<CHROMO_LENGTH> &bits);
+void   			Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspring2);
 int 			GetRandomLocation();
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE>);
 float 			ProgressTime();
@@ -43,21 +46,31 @@ int main() {
 	vector<Entity> eater_population(EATER_POP_SIZE);
 	vector<Entity> tmp_eater_population(EATER_POP_SIZE);
 
-	string genes1,genes2;
+	bitset<CHROMO_LENGTH> genes1,genes2;
 	Entity tmp_ent, child1, child2;
 	Chromosome tmp_chrm,new_chrm1,new_chrm2;
 
 	vector<string> str_world;
 
+	//std::cout << "Creating " << EATER_POP_SIZE << " eaters and " << PLANT_POP_SIZE << " plant in a " << WORLD_SIZE << " square world." << std::endl;
 
 	//create the eaters and place them in the world
 	for (int i=0; i<EATER_POP_SIZE; i++) {
+		genes1.reset();
+
+		for (int j=0; j<CHROMO_LENGTH; j++) {
+			if (RANDOM_NUM < 0.5) {
+				genes1[j].flip();
+			}
+		}
 
 
-		tmp_chrm = Chromosome(GetRandomBits(CHROMO_LENGTH), 0.0f, CHROMO_LENGTH);
+		tmp_chrm = Chromosome(genes1, 1.0f, CHROMO_LENGTH);
 
 		tmp_ent = Entity("eater", tmp_chrm);
-		tmp_ent.state = GetRandomBits(STATE_SIZE);	//need a random starting state
+		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
+
+		//std::cout << "Storing genetic code in rules table." << std::endl;
 		tmp_ent.genes.BitsToRules();
 
 		do {
@@ -67,9 +80,11 @@ int main() {
 
 		world[x][y] = tmp_ent;
 
-		/*if (i==0){
+		/*if (i==1){
+			std::cout << "first eater state and genetic code " << tmp_ent.state << std::endl;
+
 			for(int j=0; j<GENE_COUNT; j++) {
-				std::cout << j << ": " << tmp_ent.genes.rules[std::bitset<4+STATE_SIZE>(j).to_string()] << std::endl;
+				std::cout << j << ": " << tmp_ent.genes.rules[j] << std::endl;
 			}
 		}*/
 	}
@@ -125,15 +140,15 @@ int main() {
 			Mutate(genes1);
 			Mutate(genes2);
 
-			new_chrm1 = Chromosome(genes1, 0.0f, CHROMO_LENGTH); 
-			new_chrm2 = Chromosome(genes2, 0.0f, CHROMO_LENGTH); 
+			new_chrm1 = Chromosome(genes1, 1.0f, CHROMO_LENGTH); 
+			new_chrm2 = Chromosome(genes2, 1.0f, CHROMO_LENGTH); 
 
 			//set up the new entity
 			child1 = Entity("eater", new_chrm1);
-			child1.state = GetRandomBits(STATE_SIZE);
+			child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
 			child1.genes.BitsToRules();
 			child2 = Entity("eater", new_chrm2);
-			child2.state = GetRandomBits(STATE_SIZE);
+			child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
 			child2.genes.BitsToRules();
 
 			if (i==0) {
@@ -144,7 +159,7 @@ int main() {
 			tmp_eater_population.push_back(child2);
 		}
 
-		//clear out the world?
+		//clear out the world
 		world = array<array<Entity, WORLD_SIZE>, WORLD_SIZE>();
 
 		//place the new population into the world
@@ -178,9 +193,6 @@ int main() {
 		WorldToStrings(world);
 		#endif
 	}
-
-	
-
 
 }
 
@@ -228,12 +240,14 @@ void RespawnPlantNearby(int x1, int y1) {
 // Presently, plants do nothing and "none" squares do nothing
 float ProgressTime() {
 	int x,y,m;
-	string view,rule_key,rule,mvmt;
 	//	bit     3    2    1    0
  	//  wpos    7    5    3    1
 	//  x       -    0    +    0
 	//  y       0    +    0    -
-	std::bitset<4> view_bits(0); 
+	bitset<4> view(0);
+	bitset<2> mvmt(0);
+	bitset<GENE_LENGTH+2> rule_key(0);
+	bitset<GENE_LENGTH> rule(0);
 	float max_fitness = 0.0f;
 
 	//std::cout << "time: " << time_step << std::endl;
@@ -248,31 +262,44 @@ float ProgressTime() {
 
 				if (x != WORLD_SIZE-1) {
 					if (world[x+1][y].type == "plant")
-						view_bits.set(1);
+						view.set(1);
 				} else if (x != 0) {
 					if (world[x-1][y].type == "plant")
-						view_bits.set(3);
+						view.set(3);
 				}
 				if (y != WORLD_SIZE-1) {
 					if (world[x][y+1].type == "plant")
-						view_bits.set(2);
+						view.set(2);
 				} else if (y != 0) {
 					if (world[x][y-1].type == "plant")
-						view_bits.set(0);
+						view.set(0);
+				}
+
+				for (int i=0; i<(2+GENE_LENGTH); i++) {
+					if (i<GENE_LENGTH) {
+						rule_key[i] = world[x][y].state[i];
+					} else {
+						rule_key[i] = view[i-GENE_LENGTH];
+					}
+				}
+
+				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
+				rule = world[x][y].genes.rules[rule_key.to_ulong()];
+				//std::cout << "rule: " << rule << std::endl;
+
+				//mvmt = rule.substr(0, 2);			 	//get movement out of the rule
+				//world[x][y].state = rule.substr(2, STATE_SIZE);	
+				for(int i=0; i<GENE_LENGTH; i++) {
+					if (i<2) {
+						mvmt[i] = rule[i];
+					} else {
+						world[x][y].state[i-2] = rule[i];   //update the eater's state regardless
+					}
 				}
 
 
-				view = view_bits.to_string();
-				rule_key = view + world[x][y].state; 	//thanks string concatenation
-
-				//std::cout << "rule key: " << rule_key << std::endl;
-				rule = world[x][y].genes.rules[rule_key];
-				//std::cout << "rule: " << rule << std::endl;
-
-				mvmt = rule.substr(0, 2);			 	//get movement out of the rule
-				world[x][y].state = rule.substr(2, STATE_SIZE);	//update the eater's state regardless
-
-				m = std::stoi(mvmt, NULL, 2);
+				//m = std::stoi(mvmt, NULL, 2);
+				m = mvmt.to_ulong();
 				//std::cout << m << std::endl;
 
 				if (max_fitness < world[x][y].genes.fitness) {
@@ -389,56 +416,45 @@ vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w) {
 	return str_world;
 }
 
-
-string	GetRandomBits(int length) {
-	string bits;
-
-	for (int i=0; i<length; i++)
-	{
-		if (RANDOM_NUM > 0.5f)
-
-			bits += "1";
-
-		else
-
-			bits += "0";
-	}
-
-	return bits;
-}
-
-void Mutate(string &bits) {
-	for (int i=0; i<bits.length(); i++) {
+void Mutate(bitset<CHROMO_LENGTH> &bits) {
+	for (int i=0; i<CHROMO_LENGTH; i++) {
 		if (RANDOM_NUM < MUTATION_RATE) {
-			if (bits.at(i) == '1')
-
-				bits.at(i) = '0';
-
-			else
-
-				bits.at(i) = '1';
+			if (bits[i]) {
+				bits[i] = 0;
+			} else {
+				bits[i] = 1;
+			}
 		}
 	}
 
 	return;
 }
 
-void Crossover(string &offspring1, string &offspring2) {
+void Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspring2) {
+  bitset<CHROMO_LENGTH> t1,t2;
+  int crossover;
+
   //dependent on the crossover rate
   if (RANDOM_NUM < CROSSOVER_RATE)
   {
     //create a random crossover point
-    int crossover = (int) (RANDOM_NUM * CHROMO_LENGTH);
-
-    string t1 = offspring1.substr(0, crossover) + offspring2.substr(crossover, CHROMO_LENGTH);
-    string t2 = offspring2.substr(0, crossover) + offspring1.substr(crossover, CHROMO_LENGTH);
-
+    crossover = (int)(RANDOM_NUM*CHROMO_LENGTH);
+	for (int i=0; i<CHROMO_LENGTH; i++) {
+		if (i < crossover) {
+			t1[i] = offspring1[i];
+			t2[i] = offspring2[i];
+		} else {
+			t1[i] = offspring2[i];
+			t2[i] = offspring1[i];
+		}
+	}
     offspring1 = t1; offspring2 = t2;				  
+
   }
 }
 
 
-string Roulette(int total_fitness, vector<Entity> population) {
+bitset<CHROMO_LENGTH> Roulette(int total_fitness, vector<Entity> population) {
 	//generate a random number between 0 & total fitness count
 	float Slice = (float)(RANDOM_NUM * total_fitness);
 
@@ -457,7 +473,7 @@ string Roulette(int total_fitness, vector<Entity> population) {
 
 	}
 
-	std::cout << "Failed to select a candidate. Crashing soon :)" << std::endl;
-	return "";
+	//std::cout << "Failed to select a candidate. Crashing soon :)" << std::endl;
+	return bitset<CHROMO_LENGTH>();
 }
 
