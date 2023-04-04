@@ -15,7 +15,7 @@ using std::string;
 using std::vector;
 using std::array;
 
-#define MAKE_CSV 0
+#define MAKE_CSV 1
 
 //returns a float between 0 & 1
 #define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))
@@ -23,13 +23,16 @@ using std::array;
 //returns a random integer between 0 and N-1
 #define RANDOM_NUM_RANGE(N)	rand() % (int)N
 
-//bitset<CHROMO_LENGTH>  	GetRandomBits(int length);
 bitset<CHROMO_LENGTH>  	Roulette(int total_fitness, vector<Entity> population);
 
 void Mutate(bitset<CHROMO_LENGTH> &bits);
 void Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspring2);
 int GetRandomLocation();
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE>);
+
+template <class T, long unsigned int N>
+void RespawnPlantNearby(array<array<T, N>, N> *world, int x1, int y1);
+
 
 int time_step = 0; //current "day"
 
@@ -117,7 +120,7 @@ float ProgressTime(array<array<T, N>, N> *world) {
 								(*world)[x][y-1] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();	
 								//RespawnPlant();	
-								//RespawnPlantNearby(x,y-1);			
+								RespawnPlantNearby(world,x-1,y);				
 							} else if((*world)[x][y-1].type == "none") {
 								(*world)[x][y-1] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
@@ -131,7 +134,7 @@ float ProgressTime(array<array<T, N>, N> *world) {
 								(*world)[x+1][y] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
 								//RespawnPlant();
-								//RespawnPlantNearby(x+1,y);		
+								RespawnPlantNearby(world,x-1,y);			
 							} else if((*world)[x+1][y].type == "none") {
 								(*world)[x+1][y] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
@@ -145,7 +148,7 @@ float ProgressTime(array<array<T, N>, N> *world) {
 								(*world)[x][y+1] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
 								//RespawnPlant();
-								//RespawnPlantNearby(x,y+1);	
+								RespawnPlantNearby(world,x-1,y);		
 							} else if((*world)[x][y+1].type == "none") {
 								(*world)[x][y+1] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
@@ -159,7 +162,7 @@ float ProgressTime(array<array<T, N>, N> *world) {
 								(*world)[x-1][y] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
 								//RespawnPlant();
-								//RespawnPlantNearby(x-1,y);	
+								RespawnPlantNearby(world,x-1,y);	
 							} else if((*world)[x-1][y].type == "none") {
 								(*world)[x-1][y] = (*world)[x][y]; 			//move the eater
 								(*world)[x][y] = Entity();					//replace the eater with nothing
@@ -179,7 +182,6 @@ float ProgressTime(array<array<T, N>, N> *world) {
 	time_step++;	//increment time step
 	return max_fitness;
 }
-//array<array<Entity, WORLD_SIZE>, WORLD_SIZE> world;
 
 
 int main() {
@@ -365,7 +367,8 @@ int main() {
 }*/
 
 //plant respawns near x1,y1
-/*void RespawnPlantNearby(int x1, int y1) {
+template <class T, long unsigned int N>
+void RespawnPlantNearby(array<array<T, N>, N> *world, int x1, int y1) {
 	int x2,y2;
 	Entity tmp_ent = Entity("plant");
 
@@ -377,9 +380,11 @@ int main() {
 		if (x2 > WORLD_SIZE-1) x2 = WORLD_SIZE-1;
 		if (y2 > WORLD_SIZE-1) y2 = WORLD_SIZE-1;
 
-	} while(world[x2][y2].type != "none");
+	} while((*world)[x2][y2].type != "none");
 
-}*/
+	(*world)[x2][y2] = tmp_ent;
+
+}
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w) {
 	int x,y;
