@@ -6,8 +6,10 @@
 #define GENE_LENGTH               	(2+STATE_SIZE)
 #define CHROMO_LENGTH				(GENE_COUNT)*(GENE_LENGTH)
 
-#define CROSSOVER_RATE            	0.8
+#define CROSSOVER_RATE            	0.7
 #define MUTATION_RATE             	0.001
+#define DELETION_RATE               0.01
+#define MAX_DELETION_LENGTH         3*GENE_LENGTH
 #define EATER_POP_SIZE              50              //Must be even (roulette rules)
 #define PLANT_POP_SIZE              350
 

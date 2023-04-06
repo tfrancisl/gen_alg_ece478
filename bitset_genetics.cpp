@@ -1,15 +1,9 @@
 #include "bitset_genetics.h"
 
-
-
 void Mutate(bitset<CHROMO_LENGTH> &bits) {
 	for (int i=0; i<CHROMO_LENGTH; i++) {
 		if (RANDOM_NUM < MUTATION_RATE) {
-			if (bits[i]) {
-				bits[i] = 0;
-			} else {
-				bits[i] = 1;
-			}
+			bits[i].flip();
 		}
 	}
 
@@ -37,6 +31,22 @@ void Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspri
     offspring1 = t1; offspring2 = t2;				  
 
   }
+}
+
+void Deletion(bitset<CHROMO_LENGTH> &bits) {
+	int del_pt,del_len;
+
+	if (RANDOM_NUM < DELETION_RATE) {
+		del_pt = (int)(RANDOM_NUM*CHROMO_LENGTH);
+		del_len = RANDOM_NUM_RANGE(MAX_DELETION_LENGTH) + 1;
+
+		for (int i=del_pt; i<del_pt+del_len; i++) {
+			if (i<CHROMO_LENGTH) {
+				bits[i] = 0;
+			}
+		}
+	}
+
 }
 
 bitset<CHROMO_LENGTH> Roulette(int total_fitness, vector<Entity> population) {

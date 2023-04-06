@@ -19,10 +19,10 @@ def moving_average(x, w):
 data = pd.read_csv(data_file, header=int(sys.argv[2]))
 
 fig, ax = plt.subplots()
-#ax.plot(data['generation'], data['max_fitness'])
-#ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['max_fitness'], avg_n))
-#fig.savefig(base_name + "_fitness.png")
-#ax.clear()
+ax.plot(data['generation'], data['max_fitness'])
+ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['max_fitness'], avg_n))
+fig.savefig(base_name + "_fitness.png")
+ax.clear()
 
 ax.plot(data['generation'], data['avg_fitness'])
 ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['avg_fitness'], avg_n))

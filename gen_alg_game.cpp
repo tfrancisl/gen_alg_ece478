@@ -111,6 +111,10 @@ void GenAlgGame::Generation() {
         Mutate(genes1);
         Mutate(genes2);
 
+		//random deletion
+		Deletion(genes1);
+		Deletion(genes2);
+
         new_chrm1 = Chromosome(genes1, 1.0f, CHROMO_LENGTH); 
         new_chrm2 = Chromosome(genes2, 1.0f, CHROMO_LENGTH); 
 
