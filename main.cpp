@@ -1,12 +1,15 @@
 #include "gen_alg.h"
 #include "gen_alg_game.h"
 #include <vector>
+#include "time.h"
 using std::vector;
 
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
 int main(void) {
+
+	srand((int)time(NULL));
 
     GenAlgGame *game1 = new GenAlgGame(EATER_POP_SIZE, PLANT_POP_SIZE);
     int max_fitness;

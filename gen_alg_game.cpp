@@ -298,6 +298,7 @@ float GenAlgGame::ProgressTime2() {
 	bitset<GENE_LENGTH> rule(0);
 	float max_fitness = 0.0f;
 	string facing_type;
+	unsigned long face_dir;
 
 
 	for (x=0; x<WORLD_SIZE; x++) {
@@ -305,24 +306,20 @@ float GenAlgGame::ProgressTime2() {
 			if((*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
 				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
 
-				//set the grid theyre looking at based on facing direction
-				switch((*world)[x][y].facing.to_ulong()) {
-					case 0:
-							xf = x;
-							yf = y-1;
-						break;
-					case 1:
-							xf = x+1;
-							yf = y;
-						break;
-					case 2:
-							xf = x;
-							yf = y+1;
-						break;
-					case 3:
-							xf = x-1;
-							yf = y;
-						break;
+				face_dir = (*world)[x][y].facing.to_ulong();
+
+				if (face_dir == 0) {
+					xf = x;
+					yf = y-1;
+				} else if (face_dir == 1) {
+					xf = x+1;
+					yf = y;
+				} else if (face_dir == 2) {
+					xf = x;
+					yf = y+1;
+				} else if (face_dir ==3){
+					xf = x-1;
+					yf = y; 
 				}
 
 				view[0] = (*world)[x][y].facing[0];
@@ -350,14 +347,27 @@ float GenAlgGame::ProgressTime2() {
 				}
 
 				for (int i=0; i<(2+GENE_LENGTH); i++) {
+					
+
+					//I think this first one is right, verify
+					//#1
 					if (i<STATE_SIZE) {
-						rule_key[i] = (*world)[x][y].state[i];
+						rule_key[i] = view[i];
 					} else {
-						rule_key[i] = view[i-STATE_SIZE];
+						rule_key[i] = (*world)[x][y].state[i-STATE_SIZE];
 					}
+				
+					//#2
+					//if (i<STATE_SIZE) {
+					//	rule_key[i] = (*world)[x][y].state[i];
+					//} else {
+					//	rule_key[i] = view[i-STATE_SIZE];
+					//}
 				}
 
+				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
 				rule = (*world)[x][y].genes.rules[rule_key.to_ulong()];
+				//std::cout << "rule: " << rule << std::endl;
 
 				for(int i=0; i<GENE_LENGTH; i++) {
 					if (i<2) {
@@ -379,8 +389,6 @@ float GenAlgGame::ProgressTime2() {
 				} else if (m==3) {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
 				} else if ((view[2] || view[3]) && facing_type != "eater") { // (view[0] || view[1]) means they aren't looking at a wall
-					//std::cout << "attemping to move eater " << xf << " " << yf << std::endl;
-					//std::cout << "view: " << view[2] << " " << view[3] << std::endl;
 					
 					(*world)[xf][yf] = (*world)[x][y]; 			//move the eater
 					(*world)[x][y] = Entity();					//replace it with nothing

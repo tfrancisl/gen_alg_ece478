@@ -9,11 +9,11 @@
 #define CROSSOVER_RATE            	0.8
 #define MUTATION_RATE             	0.001
 #define EATER_POP_SIZE              50              //Must be even (roulette rules)
-#define PLANT_POP_SIZE              250
+#define PLANT_POP_SIZE              350
 
-#define WORLD_SIZE 					40
-#define DAYS_PER_GENERATION 		200
-#define GENERATIONS					2000
+#define WORLD_SIZE 					50
+#define DAYS_PER_GENERATION 		250
+#define GENERATIONS					1000
 
 #define MAKE_CSV 1
 
