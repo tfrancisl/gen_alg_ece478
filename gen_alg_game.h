@@ -15,7 +15,9 @@ public:
     array<array<Entity, WORLD_SIZE>, WORLD_SIZE> *world;
 
 
-    float ProgressTime();
+    float ProgressTime(); 
+    float ProgressTime2();      //game logic more similar to the original plant and eater 
+
     void Generation();
     void RespawnPlantNearby(int x1, int y1);
 

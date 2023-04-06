@@ -15,7 +15,7 @@
 #define DAYS_PER_GENERATION 		200
 #define GENERATIONS					2000
 
-#define MAKE_CSV 0
+#define MAKE_CSV 1
 
 //returns a float between 0 & 1
 #define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))

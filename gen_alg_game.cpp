@@ -37,6 +37,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
 		tmp_ent = Entity("eater", tmp_chrm);
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
+		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
 
 		tmp_ent.genes.BitsToRules();
 
@@ -76,7 +77,7 @@ void GenAlgGame::Generation() {
     eater_population.clear();
 
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
-        max_fitness = ProgressTime();
+        max_fitness = ProgressTime2();
     }
 
     total_fitness = 0.0f;
@@ -200,9 +201,7 @@ float GenAlgGame::ProgressTime() {
 				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
 				rule = (*world)[x][y].genes.rules[rule_key.to_ulong()];
 				//std::cout << "rule: " << rule << std::endl;
-
-				//mvmt = rule.substr(0, 2);			 	//get movement out of the rule
-				//world[x][y].state = rule.substr(2, STATE_SIZE);	
+	
 				for(int i=0; i<GENE_LENGTH; i++) {
 					if (i<2) {
 						mvmt[i] = rule[i];
@@ -211,8 +210,6 @@ float GenAlgGame::ProgressTime() {
 					}
 				}
 
-
-				//m = std::stoi(mvmt, NULL, 2);
 				m = mvmt.to_ulong();
 				//std::cout << m << std::endl;
 
@@ -282,6 +279,118 @@ float GenAlgGame::ProgressTime() {
 
 				
 
+			}
+		}
+
+	}
+
+
+	time_step++;	//increment time step
+	return max_fitness;
+}
+
+
+float GenAlgGame::ProgressTime2() {
+    int x,y,m,xf,yf;
+	bitset<4> view(0);
+	bitset<2> action(0);
+	bitset<GENE_LENGTH+2> rule_key(0);
+	bitset<GENE_LENGTH> rule(0);
+	float max_fitness = 0.0f;
+	string facing_type;
+
+
+	for (x=0; x<WORLD_SIZE; x++) {
+		for (y=0; y<WORLD_SIZE; y++) {
+			if((*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
+				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
+
+				//set the grid theyre looking at based on facing direction
+				switch((*world)[x][y].facing.to_ulong()) {
+					case 0:
+							xf = x;
+							yf = y-1;
+						break;
+					case 1:
+							xf = x+1;
+							yf = y;
+						break;
+					case 2:
+							xf = x;
+							yf = y+1;
+						break;
+					case 3:
+							xf = x-1;
+							yf = y;
+						break;
+				}
+
+				view[0] = (*world)[x][y].facing[0];
+				view[1] = (*world)[x][y].facing[1];
+
+				
+				if (xf < 0 || yf < 0 || xf>WORLD_SIZE-1 || yf>WORLD_SIZE-1) {  //must be looking at a wall
+					view[2] = 0;
+					view[3] = 0;
+				} else {
+					facing_type = (*world)[xf][yf].type;
+				
+					if(facing_type == "none") {
+						view[2] = 1;
+						view[3] = 0;
+					} else if (facing_type == "eater") {
+						view[2] = 0;
+						view[3] = 1;
+
+					} else if (facing_type == "plant") {
+						view[2] = 1;
+						view[3] = 1;
+					}
+ 
+				}
+
+				for (int i=0; i<(2+GENE_LENGTH); i++) {
+					if (i<STATE_SIZE) {
+						rule_key[i] = (*world)[x][y].state[i];
+					} else {
+						rule_key[i] = view[i-STATE_SIZE];
+					}
+				}
+
+				rule = (*world)[x][y].genes.rules[rule_key.to_ulong()];
+
+				for(int i=0; i<GENE_LENGTH; i++) {
+					if (i<2) {
+						action[i] = rule[i];
+					} else {
+						(*world)[x][y].state[i-2] = rule[i];   //update the eater's state regardless
+					}
+				}
+
+				m = action.to_ulong();
+				//00 = forward, 01 = backward, 10 = +1 to facing, 11 = -1 to facing
+
+				if (max_fitness < (*world)[x][y].genes.fitness) {
+					max_fitness = (*world)[x][y].genes.fitness;
+				}
+
+				if (m==2) {
+					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()+1);
+				} else if (m==3) {
+					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
+				} else if ((view[2] || view[3]) && facing_type != "eater") { // (view[0] || view[1]) means they aren't looking at a wall
+					//std::cout << "attemping to move eater " << xf << " " << yf << std::endl;
+					//std::cout << "view: " << view[2] << " " << view[3] << std::endl;
+					
+					(*world)[xf][yf] = (*world)[x][y]; 			//move the eater
+					(*world)[x][y] = Entity();					//replace it with nothing
+
+					if(facing_type == "plant") {
+						(*world)[xf][yf].genes.fitness += 1.0;
+						RespawnPlantNearby(xf,yf);
+					}
+				}
+				
 			}
 		}
 

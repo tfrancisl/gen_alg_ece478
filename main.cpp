@@ -11,6 +11,7 @@ int main(void) {
     GenAlgGame *game1 = new GenAlgGame(EATER_POP_SIZE, PLANT_POP_SIZE);
     int max_fitness;
 
+
     #if MAKE_CSV
 	std::cout << "generation,max_fitness,avg_fitness,avg_fitness_10" << std::endl;
 	#endif
@@ -20,7 +21,7 @@ int main(void) {
     }
 
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
-		max_fitness = game1->ProgressTime();
+		max_fitness = game1->ProgressTime2();
 		#if !MAKE_CSV
 		WorldToStrings(*(game1->world));
 		#endif
