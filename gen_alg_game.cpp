@@ -10,7 +10,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
     bitset<CHROMO_LENGTH> genes1;
 	Entity tmp_ent;
-	Chromosome tmp_chrm;
+	Chromosome<GENE_LENGTH,GENE_COUNT> tmp_chrm;
     int x,y;
 
 	this->world = new array<array<Entity, WORLD_SIZE>, WORLD_SIZE>;
@@ -21,6 +21,10 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
     this->eater_pop_size = eater_pop_size;
     this->plant_pop_size = plant_pop_size;
+
+	//make empty eater pop vector
+	eater_pop.assign(this->eater_pop_size, Chromosome<GENE_LENGTH,GENE_COUNT>());
+
     time_step = 0;
     gen = 0;
 
@@ -33,15 +37,18 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 			}
 		}
 
-		tmp_chrm = Chromosome(genes1, 1.0f, CHROMO_LENGTH);
+		tmp_chrm = Chromosome<GENE_LENGTH,GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH);
 
-		tmp_ent = Entity("eater", tmp_chrm);
+		tmp_ent = Entity("eater");
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
 		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
 
-		tmp_ent.genes.BitsToRules();
+		//tmp_ent.genes.BitsToRules();
+		tmp_chrm.BitsToRules();
+		eater_pop.at(i) = tmp_chrm;
 
         GetRandomCoord(tmp_ent);
+		tmp_ent.pop_index = i;
 		
 	}
 
@@ -66,15 +73,15 @@ void GenAlgGame::GetRandomCoord(Entity ent) {
 
 void GenAlgGame::Generation() {
 
-    vector<Entity> tmp_eater_population;
-    vector<Entity> eater_population;
+    vector<Chromosome<GENE_LENGTH,GENE_COUNT>> tmp_eater_population;
     int max_fitness,total_fitness;
     int x,y;
+	int current_pop_index;
 
     gen++;
 
-    tmp_eater_population.clear();
-    eater_population.clear();
+	//make empty tmp eater population vector
+    tmp_eater_population.assign(this->eater_pop_size, Chromosome<GENE_LENGTH,GENE_COUNT>());;
 
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
         max_fitness = ProgressTime2();
@@ -84,8 +91,8 @@ void GenAlgGame::Generation() {
     for (x=0; x<WORLD_SIZE; x++) {
         for (y=0; y<WORLD_SIZE; y++) {
             if((*world)[x][y].type == "eater") {
-                total_fitness += (*world)[x][y].genes.fitness;
-                eater_population.push_back((*world)[x][y]);
+				current_pop_index = (*world)[x][y].pop_index;
+				total_fitness += eater_pop[current_pop_index].fitness;
             }
         }
     }
@@ -94,15 +101,21 @@ void GenAlgGame::Generation() {
     std::cout << gen << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << std::endl;
     #endif
 
+	 //clear out the world
+    for (int s=0; s<WORLD_SIZE; s++) {
+        (*world)[s].fill(Entity());
+    }
+
+
     for (int i=0; i<EATER_POP_SIZE/2; i++) {
         bitset<CHROMO_LENGTH> genes1,genes2;
         Entity child1, child2;
-	    Chromosome new_chrm1,new_chrm2;
+	    Chromosome<GENE_LENGTH,GENE_COUNT> new_chrm1,new_chrm2;
 
 
         //Select two
-        genes1 = Roulette(total_fitness, eater_population);
-        genes2 = Roulette(total_fitness, eater_population);
+        genes1 = Roulette(total_fitness, eater_pop);
+        genes2 = Roulette(total_fitness, eater_pop);
 
         //crossover
         Crossover(genes1, genes2);
@@ -115,34 +128,36 @@ void GenAlgGame::Generation() {
 		Deletion(genes1);
 		Deletion(genes2);
 
-        new_chrm1 = Chromosome(genes1, 1.0f, CHROMO_LENGTH); 
-        new_chrm2 = Chromosome(genes2, 1.0f, CHROMO_LENGTH); 
+        new_chrm1 = Chromosome<GENE_LENGTH,GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH); 
+        new_chrm2 = Chromosome<GENE_LENGTH,GENE_COUNT>(genes2, 1.0f, CHROMO_LENGTH); 
 
         //set up the new entity
-        child1 = Entity("eater", new_chrm1);
+        child1 = Entity("eater");
         child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
-        child1.genes.BitsToRules();
-        child2 = Entity("eater", new_chrm2);
+        new_chrm1.BitsToRules();
+        child2 = Entity("eater");
         child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
-        child2.genes.BitsToRules();
+        new_chrm2.BitsToRules();
 
         if (i==0) {
             child1.spec = 1;
         }
         
-        tmp_eater_population.push_back(child1);
-        tmp_eater_population.push_back(child2);
-    }
+		child1.pop_index = i;
+		child2.pop_index = 2*i;
 
-    //clear out the world
-    for (int s=0; s<WORLD_SIZE; s++) {
-        (*world)[s].fill(Entity());
-    }
+        tmp_eater_population.at(i) = new_chrm1;
+        tmp_eater_population.at(2*i) = new_chrm2;
 
-    //place the new population into the world
-    for (int i=0; i<EATER_POP_SIZE; i++) {
-        GetRandomCoord(tmp_eater_population[i]);
+		GetRandomCoord(child1);
+		GetRandomCoord(child2);
     }
+	eater_pop.clear();
+	eater_pop = tmp_eater_population;
+
+	//for (int i=0; i<EATER_POP_SIZE; i++) {
+	//	GetRandomCoord();
+	//}
 
     //create the plants and place them in the world
     for (int i=0; i<PLANT_POP_SIZE; i++) {
@@ -151,151 +166,8 @@ void GenAlgGame::Generation() {
 
 }
 
-// Progress time in the world.
-// Going left-to-right and top-to-bottom, check the entity in each grid square
-// If they're an eater, check the 4 nearby grids for plants. Concat these 4 bits with
-// the 4 bits of the current state, then key into the map to check the action and next state.
-// Take the action (if possible), and change to the next state. Move on.
-// Presently, plants do nothing and "none" squares do nothing
-float GenAlgGame::ProgressTime() {
-    int x,y,m;
-	//	bit     3    2    1    0
- 	//  (*world)pos    7    5    3    1
-	//  x       -    0    +    0
-	//  y       0    +    0    -
-	bitset<4> view(0);
-	bitset<2> mvmt(0);
-	bitset<GENE_LENGTH+2> rule_key(0);
-	bitset<GENE_LENGTH> rule(0);
-	float max_fitness = 0.0f;
-
-	//std::cout << "time: " << time_step << std::endl;
-
-	for (x=0; x<WORLD_SIZE; x++) {
-		for (y=0; y<WORLD_SIZE; y++) {
-			if((*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
-
-				//std::cout << "time: " << time_step << std::endl;
-				//std::cout << "current ent last action: " << world[x][y].last_action << std::endl;
-				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
-
-				if (x != WORLD_SIZE-1) {
-					if ((*world)[x+1][y].type == "plant")
-						view.set(1);
-				} else if (x != 0) {
-					if ((*world)[x-1][y].type == "plant")
-						view.set(3);
-				}
-				if (y != WORLD_SIZE-1) {
-					if ((*world)[x][y+1].type == "plant")
-						view.set(2);
-				} else if (y != 0) {
-					if ((*world)[x][y-1].type == "plant")
-						view.set(0);
-				}
-
-				for (int i=0; i<(2+GENE_LENGTH); i++) {
-					if (i<GENE_LENGTH) {
-						rule_key[i] = (*world)[x][y].state[i];
-					} else {
-						rule_key[i] = view[i-GENE_LENGTH];
-					}
-				}
-
-				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
-				rule = (*world)[x][y].genes.rules[rule_key.to_ulong()];
-				//std::cout << "rule: " << rule << std::endl;
-	
-				for(int i=0; i<GENE_LENGTH; i++) {
-					if (i<2) {
-						mvmt[i] = rule[i];
-					} else {
-						(*world)[x][y].state[i-2] = rule[i];   //update the eater's state regardless
-					}
-				}
-
-				m = mvmt.to_ulong();
-				//std::cout << m << std::endl;
-
-				if (max_fitness < (*world)[x][y].genes.fitness) {
-					max_fitness = (*world)[x][y].genes.fitness;
-				}
-
-				//should find some alternative logic here - switch/case/break is not great
-				switch(m) {
-					case 0:
-						if( !(y-1 < 0) ) {
-							if((*world)[x][y-1].type == "plant") {
-								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								(*world)[x][y-1] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();	
-								//RespawnPlant();	
-								RespawnPlantNearby(x-1,y);				
-							} else if((*world)[x][y-1].type == "none") {
-								(*world)[x][y-1] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-							}
-						}	
-						break;
-					case 1:
-						if( !(x+1 > WORLD_SIZE-1) )  {
-							if((*world)[x+1][y].type == "plant") {
-								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								(*world)[x+1][y] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-								//RespawnPlant();
-								RespawnPlantNearby(x-1,y);			
-							} else if((*world)[x+1][y].type == "none") {
-								(*world)[x+1][y] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-							}
-						}
-						break;
-					case 2:
-						if( !(y+1 > WORLD_SIZE-1) ) {
-							if((*world)[x][y+1].type == "plant") {
-								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								(*world)[x][y+1] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-								//RespawnPlant();
-								RespawnPlantNearby(x-1,y);		
-							} else if((*world)[x][y+1].type == "none") {
-								(*world)[x][y+1] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-							}
-						}
-						break;
-					case 3:
-						if( !(x-1 < 0) ) {
-							if((*world)[x-1][y].type == "plant") {
-								(*world)[x][y].genes.fitness += 1.0; 		//ate a plant, fitness up
-								(*world)[x-1][y] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-								//RespawnPlant();
-								RespawnPlantNearby(x-1,y);	
-							} else if((*world)[x-1][y].type == "none") {
-								(*world)[x-1][y] = (*world)[x][y]; 			//move the eater
-								(*world)[x][y] = Entity();					//replace the eater with nothing
-							}
-						}
-						break;
-				}
-
-				
-
-			}
-		}
-
-	}
-
-
-	time_step++;	//increment time step
-	return max_fitness;
-}
-
-
 float GenAlgGame::ProgressTime2() {
-    int x,y,m,xf,yf;
+    int x,y,m,xf,yf, current_pop_index;
 	bitset<4> view(0);
 	bitset<2> action(0);
 	bitset<GENE_LENGTH+2> rule_key(0);
@@ -308,6 +180,8 @@ float GenAlgGame::ProgressTime2() {
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
 			if((*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
+				
+				current_pop_index = (*world)[x][y].pop_index;
 				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
 
 				face_dir = (*world)[x][y].facing.to_ulong();
@@ -370,7 +244,7 @@ float GenAlgGame::ProgressTime2() {
 				}
 
 				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
-				rule = (*world)[x][y].genes.rules[rule_key.to_ulong()];
+				rule = eater_pop[current_pop_index].rules[rule_key.to_ulong()];
 				//std::cout << "rule: " << rule << std::endl;
 
 				for(int i=0; i<GENE_LENGTH; i++) {
@@ -384,8 +258,8 @@ float GenAlgGame::ProgressTime2() {
 				m = action.to_ulong();
 				//00 = forward, 01 = backward, 10 = +1 to facing, 11 = -1 to facing
 
-				if (max_fitness < (*world)[x][y].genes.fitness) {
-					max_fitness = (*world)[x][y].genes.fitness;
+				if (max_fitness < eater_pop[current_pop_index].fitness) {
+					max_fitness = eater_pop[current_pop_index].fitness;
 				}
 
 				if (m==2) {
@@ -398,7 +272,8 @@ float GenAlgGame::ProgressTime2() {
 					(*world)[x][y] = Entity();					//replace it with nothing
 
 					if(facing_type == "plant") {
-						(*world)[xf][yf].genes.fitness += 1.0;
+						eater_pop[current_pop_index].fitness += 1.0;
+						//GetRandomCoord(Entity("plant"));
 						RespawnPlantNearby(xf,yf);
 					}
 				}
@@ -412,7 +287,6 @@ float GenAlgGame::ProgressTime2() {
 	time_step++;	//increment time step
 	return max_fitness;
 }
-
 
 void GenAlgGame::RespawnPlantNearby(int x1, int y1) {
     int x2,y2;

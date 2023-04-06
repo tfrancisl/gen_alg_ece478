@@ -7,39 +7,36 @@ using std::vector;
 
 
 
-
-Chromosome::Chromosome(){
-    this->bits = bitset<CHROMO_LENGTH>(0);
+template<int gene_len, int gene_count>
+Chromosome<gene_len, gene_count>::Chromosome(){
+    this->bits = bitset<gene_len*gene_count>(0);
     this->fitness = 1.0f;
-    this->length = CHROMO_LENGTH;
+    this->length = gene_len*gene_count;
 }
 
-Chromosome::Chromosome(bitset<CHROMO_LENGTH> b, float f, int l) {
+template<int gene_len, int gene_count>
+Chromosome<gene_len, gene_count>::Chromosome(bitset<gene_len*gene_count> b, float f, int l) {
     this->bits = b;
     this->fitness = f;
     this->length = l;
 }
 
-void Chromosome::PrintChromosome() {
+template<int gene_len, int gene_count>
+void Chromosome<gene_len, gene_count>::PrintChromosome() {
     std::cout << this->bits.to_string() << std::endl;
 }
 
-void Chromosome::BitsToRules() {
+template<int gene_len, int gene_count>
+void Chromosome<gene_len, gene_count>::BitsToRules() {
     int key;
-    bitset<GENE_LENGTH> val;
+    bitset<gene_len> val;
 
-    for(int i=0; i<GENE_COUNT; i++) {
-        //for (int j=0; j<GENE_LENGTH; j++) {
+    for(int i=0; i<gene_count; i++) {
+        for (int k=0; k<gene_len; k++) {
+            val[k] = bits[gene_len*i+k];
+        }
 
-            //val = bits.substr(i*j, GENE_LENGTH);
-            for (int k=0; k<GENE_LENGTH; k++) {
-                val[k] = bits[GENE_LENGTH*i+k];
-            }
-
-            key = i;
-            rules[key] = val; 
-
-
-        //}
+        key = i;
+        rules[key] = val; 
     }
 }

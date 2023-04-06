@@ -9,10 +9,9 @@ class Entity {
 public:
     Entity();
     Entity(string t);
-    Entity(string t, Chromosome g);
-    Chromosome genes;
 
     int last_action;  //what time step was their last action taken on?
+    int pop_index;    //store their index into the array of chromosomes for their species
     string type;
     int spec;
 

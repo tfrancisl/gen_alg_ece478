@@ -15,7 +15,7 @@
 
 #define WORLD_SIZE 					50
 #define DAYS_PER_GENERATION 		250
-#define GENERATIONS					1000
+#define GENERATIONS					2500
 
 #define MAKE_CSV 1
 
