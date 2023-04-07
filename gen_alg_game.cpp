@@ -131,7 +131,7 @@ void GenAlgGame::Generation() {
 
 	//TODO: add apex to csv
     #if MAKE_CSV
-    std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << std::endl;
+    std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(APEX_POP_SIZE) << std::endl;
     #endif
 
 	 //clear out the world
@@ -264,7 +264,8 @@ void GenAlgGame::ProgressTime() {
 	bool eater_found = false;
 
 	array<int, 4> pts = {0,0,0,0};
-	array<pair<int, int>, 4> near_eater;
+	array<pair<int, int>, 4> near_eater = {pair<int,int>{0,0},pair<int,int>{0,0},pair<int,int>{0,0},pair<int,int>{0,0}};
+	array<int, 4> near_eater_idx = {0,0,0,0};
 	int prox = 10;
 	int yoff, xoff;
 
@@ -272,7 +273,8 @@ void GenAlgGame::ProgressTime() {
 
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
-			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
+			//apex only acts every 4 days...
+			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step && time_step%4==0) {
 				current_pop_index = (*world)[x][y].pop_index;
 				(*world)[x][y].last_action = time_step;
 
@@ -292,6 +294,7 @@ void GenAlgGame::ProgressTime() {
 					if((*world)[xc+x][y].type == "eater") { 
 						apex_rule_key[0] = 1; 
 						near_eater[0] = pair<int,int>{x+xc, y};
+						near_eater_idx[0] = (*world)[xc+x][y].pop_index;
 						break;
 					}
 				}
@@ -301,6 +304,7 @@ void GenAlgGame::ProgressTime() {
 					if((*world)[x-xc][y].type == "eater") {
 						apex_rule_key[1] = 1; 
 						near_eater[1] = pair<int,int>{x-xc, y};
+						near_eater_idx[1] = (*world)[x-xc][y].pop_index;
 						break;
 					}
 				}
@@ -310,6 +314,7 @@ void GenAlgGame::ProgressTime() {
 					if((*world)[x][yc+y].type == "eater") {
 						apex_rule_key[2] = 1;
 						near_eater[2] = pair<int,int>{x, y+yc}; 
+						near_eater_idx[2] = (*world)[x][y+yc].pop_index;
 						break;
 					}
 				}
@@ -318,7 +323,8 @@ void GenAlgGame::ProgressTime() {
 				for (int yc=0; yc<pts[3]-y; yc++) {
 					if((*world)[x][y-yc].type == "eater") {
 						apex_rule_key[3] = 1; 
-						near_eater[1] = pair<int,int>{x, y-yc};
+						near_eater[3] = pair<int,int>{x, y-yc};
+						near_eater_idx[3] = (*world)[x][y-yc].pop_index;
 						break;
 					}
 				}
@@ -356,13 +362,13 @@ void GenAlgGame::ProgressTime() {
 					xoff=0;
 				}
 
-
+				//this is a terribly messy bit of a game logic here--let's rethink the apex's
+				//behavior perhaps
 				//make sure the pairs have actually been filled (i.e., it found an eater in the given dir)
 				if (near_eater[m].first != 0 && near_eater[m].second != 0) {
 					int xe = near_eater[m].first + xoff;
 					int ye = near_eater[m].second + yoff;
-					int current_eater_pop_index = (*world)[xe][ye].pop_index;
-
+					int current_eater_pop_index = near_eater_idx[m];
 					//move the apex near the eater
 					(*world)[xe][ye] = (*world)[x][y]; 	
 					(*world)[x][y] = Entity();
@@ -373,6 +379,7 @@ void GenAlgGame::ProgressTime() {
 					//take from the eater's fitness
 					eater_pop[current_eater_pop_index].fitness -= eater_pop[current_eater_pop_index].fitness / 4.0;
 				}
+				//std::cout << "Test" << std::endl;
 
 
 

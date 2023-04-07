@@ -79,6 +79,6 @@ bitset<gene_len*gene_count> Roulette(int total_fitness, vector<Chromosome<gene_l
 
 	//Should never, ever have to run. 
 	//If the population passed to this and the total fitness calculated come from the same place, track_fitness will always exceed rand_fit at some point
-	std::cout << "Failed to a select a roulette candidate!!! Cumulative fitness: " << track_fitness << "/" << rand_fit << " (rand fitness), " << total_fitness << " (total fitness)." << std::endl;
+	//std::cout << "Failed to a select a roulette candidate!!! Cumulative fitness: " << track_fitness << "/" << rand_fit << " (rand fitness), " << total_fitness << " (total fitness)." << std::endl;
 	return bitset<gene_len*gene_count>();
 }

@@ -15,7 +15,7 @@ int main(void) {
 
 
     #if MAKE_CSV
-	std::cout << "generation,max_fitness,avg_fitness,avg_fitness_10" << std::endl;
+	std::cout << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex" << std::endl;
 	#endif
     
     for(int g=0; g<GENERATIONS; g++) {
