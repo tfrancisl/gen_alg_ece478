@@ -15,6 +15,10 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 	Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT> tmp_chrm;
 	Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT> tmp_chrm2;
     int x,y;
+	int ax,ay;
+	//int current_apex = 0;
+	int current_row = 0;
+	int apex_per_row = APEX_POP_SIZE/2;
 
 	this->world = new array<array<Entity, WORLD_SIZE>, WORLD_SIZE>;
 	//clear out the world
@@ -31,6 +35,46 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
     time_step = 0;
     gen = 0;
+
+	//apex must go first as they go in very specific locations
+	for (int i=0; i<APEX_POP_SIZE; i++) {
+		genes2.reset();
+
+		for (int j=0; j<APEX_CHROMO_LENGTH; j++) {
+			if (RANDOM_NUM < 0.5) {
+				genes2[j].flip();
+			}
+		}
+
+		if (i==apex_per_row) current_row++;
+
+		tmp_chrm2 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes2, 1.0f, APEX_CHROMO_LENGTH);
+
+		tmp_ent = Entity("apex");
+		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
+		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
+
+		tmp_chrm2.BitsToRules();
+		apex_pop.at(i) = tmp_chrm2;
+
+		tmp_ent.pop_index = i;
+		
+		if (current_row == 0) {
+			ay = (WORLD_SIZE-1)/4;
+		} else {
+			ay = (3*(WORLD_SIZE-1)/4);
+		}
+
+		//should do something more thorough for this
+		ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + (WORLD_SIZE/10);
+
+		(*world)[ax][ay] = tmp_ent;
+
+		//std::cout << i << ": " << "apex coords (" << ax << "," << ay << std::endl;
+
+        //GetRandomCoord(tmp_ent);
+
+	}
 
     for (int i=0; i<eater_pop_size; i++) {
 		genes1.reset();
@@ -55,29 +99,6 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 		
 	}
 
-	for (int i=0; i<APEX_POP_SIZE; i++) {
-		genes2.reset();
-
-		for (int j=0; j<APEX_CHROMO_LENGTH; j++) {
-			if (RANDOM_NUM < 0.5) {
-				genes2[j].flip();
-			}
-		}
-
-		tmp_chrm2 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes2, 1.0f, APEX_CHROMO_LENGTH);
-
-		tmp_ent = Entity("apex");
-		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
-		tmp_ent.facing = bitset<2>(0); //apex always faces up
-
-		tmp_chrm2.BitsToRules();
-		apex_pop.at(i) = tmp_chrm2;
-
-		tmp_ent.pop_index = i;
-        GetRandomCoord(tmp_ent);
-	}
-
-
 	//create the plants and place them in the world
 	for (int i=0; i<plant_pop_size; i++) {
 		GetRandomCoord(Entity("plant"));
@@ -101,8 +122,10 @@ void GenAlgGame::Generation() {
 	vector<Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>> tmp_apex_population;
     int max_fitness_eaters = 0.0f,total_fitness_eaters = 0.0f;
 	int max_fitness_apex = 0.0f, total_fitness_apex = 0.0f;
-    int x,y;
+    int x,y,ax,ay;
 	int current_pop_index;
+	int current_row = 0;
+	int apex_per_row = APEX_POP_SIZE/2;
 
     gen++;
 
@@ -139,6 +162,57 @@ void GenAlgGame::Generation() {
         (*world)[s].fill(Entity());
     }
 
+
+	for (int i=0; i<APEX_POP_SIZE/2; i++) {
+        bitset<APEX_CHROMO_LENGTH> genes3,genes4;
+        Entity child1, child2;
+	    Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT> new_chrm3,new_chrm4;
+
+        //Select two
+        genes3 = Roulette<APEX_GENE_LENGTH, APEX_GENE_COUNT>(total_fitness_apex, apex_pop);
+        genes4 = Roulette<APEX_GENE_LENGTH, APEX_GENE_COUNT>(total_fitness_apex, apex_pop);
+
+        //crossover
+        Crossover<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, genes4);
+        
+        //mutate
+        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
+        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
+
+		//random deletion
+		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
+		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
+
+        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 1.0f, CHROMO_LENGTH); 
+        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 1.0f, CHROMO_LENGTH); 
+
+        //set up the new entity
+        child1 = Entity("apex");
+        child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
+		child1.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
+        new_chrm3.BitsToRules();
+        child2 = Entity("apex");
+        child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
+		child2.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
+        new_chrm4.BitsToRules();
+        
+		child1.pop_index = 2*i;
+		child2.pop_index = 2*i+1;
+
+        apex_pop.at(2*i) = new_chrm3;
+        apex_pop.at(2*i+1) = new_chrm4;
+
+		ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + (WORLD_SIZE/10);
+		(*world)[ax][(WORLD_SIZE-1)/4] = child1;
+		(*world)[ax][(3*(WORLD_SIZE-1))/4] = child2;
+
+
+		//place the two new eaters into the empty world
+		//GetRandomCoord(child1);
+		//GetRandomCoord(child2);
+    }
+	apex_pop.clear();
+	apex_pop = tmp_apex_population;
 
     for (int i=0; i<EATER_POP_SIZE/2; i++) {
         bitset<CHROMO_LENGTH> genes1,genes2;
@@ -191,58 +265,6 @@ void GenAlgGame::Generation() {
 	eater_pop.clear();
 	eater_pop = tmp_eater_population;
 
-
-	for (int i=0; i<APEX_POP_SIZE/2; i++) {
-        bitset<APEX_CHROMO_LENGTH> genes3,genes4;
-        Entity child1, child2;
-	    Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT> new_chrm3,new_chrm4;
-
-
-        //Select two
-        genes3 = Roulette<APEX_GENE_LENGTH, APEX_GENE_COUNT>(total_fitness_apex, apex_pop);
-        genes4 = Roulette<APEX_GENE_LENGTH, APEX_GENE_COUNT>(total_fitness_apex, apex_pop);
-
-        //crossover
-        Crossover<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, genes4);
-        
-        //mutate
-        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
-        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
-
-		//random deletion
-		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
-		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
-
-        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 1.0f, CHROMO_LENGTH); 
-        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 1.0f, CHROMO_LENGTH); 
-
-        //set up the new entity
-        child1 = Entity("apex");
-        child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
-		child1.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
-        new_chrm3.BitsToRules();
-        child2 = Entity("apex");
-        child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
-		child2.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
-        new_chrm4.BitsToRules();
-
-        if (i==0) {
-            child1.spec = 1;
-        }
-        
-		child1.pop_index = 2*i;
-		child2.pop_index = 2*i+1;
-
-        apex_pop.at(2*i) = new_chrm3;
-        apex_pop.at(2*i+1) = new_chrm4;
-
-		//place the two new eaters into the empty world
-		GetRandomCoord(child1);
-		GetRandomCoord(child2);
-    }
-	apex_pop.clear();
-	apex_pop = tmp_apex_population;
-
     //create the plants and place them in the world
     for (int i=0; i<PLANT_POP_SIZE; i++) {
         GetRandomCoord(Entity("plant"));
@@ -274,64 +296,12 @@ void GenAlgGame::ProgressTime() {
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
 			//apex only acts every 4 days...
-			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step && time_step%4==0) {
+			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
 				current_pop_index = (*world)[x][y].pop_index;
 				(*world)[x][y].last_action = time_step;
 
-				pts[0] = x+prox;	//xf
-				pts[1] = x-prox;	//xb
-				pts[2] = y+prox;	//yf
-				pts[3] = y-prox;	//yb
-
-				for (int i=0; i<4; i++) {
-					if (pts[i] < 1) pts[i] = 1;
-					if (pts[i] > WORLD_SIZE-2) pts[i] = WORLD_SIZE-2;
-				}
-
-				/// could probably simplify these 4 into 1 loop?
-				//check "right"
-				for (int xc=0; xc<pts[0]-x; xc++) {
-					if((*world)[xc+x][y].type == "eater") { 
-						apex_rule_key[0] = 1; 
-						near_eater[0] = pair<int,int>{x+xc, y};
-						near_eater_idx[0] = (*world)[xc+x][y].pop_index;
-						break;
-					}
-				}
-
-				//check "left"
-				for (int xc=0; xc<pts[1]-x; xc++) {
-					if((*world)[x-xc][y].type == "eater") {
-						apex_rule_key[1] = 1; 
-						near_eater[1] = pair<int,int>{x-xc, y};
-						near_eater_idx[1] = (*world)[x-xc][y].pop_index;
-						break;
-					}
-				}
-
-				//check "up"
-				for (int yc=0; yc<pts[2]-y; yc++) {
-					if((*world)[x][yc+y].type == "eater") {
-						apex_rule_key[2] = 1;
-						near_eater[2] = pair<int,int>{x, y+yc}; 
-						near_eater_idx[2] = (*world)[x][y+yc].pop_index;
-						break;
-					}
-				}
-
-				//check "down"
-				for (int yc=0; yc<pts[3]-y; yc++) {
-					if((*world)[x][y-yc].type == "eater") {
-						apex_rule_key[3] = 1; 
-						near_eater[3] = pair<int,int>{x, y-yc};
-						near_eater_idx[3] = (*world)[x][y-yc].pop_index;
-						break;
-					}
-				}
-
-				//std::cout << "nearby eater coords: " << near_eater[0].first <<" " << near_eater[0].second << std::endl;
-
-
+				//fill in traits section of rule_key
+				
 				for (int i=APEX_TRAITS; i<(APEX_TRAITS+STATE_SIZE); i++) { // copy current state into key
 					apex_rule_key[i] = (*world)[x][y].state[i-APEX_TRAITS];
 				}
@@ -347,39 +317,7 @@ void GenAlgGame::ProgressTime() {
 				}
 
 				m = action.to_ulong();
-				//00 = go to first eater, 01 = go to second eater, 10 = ...etc, 11 = 
-				if(m==0) {
-					yoff=0;
-					xoff=-1;
-				} else if (m==1) {
-					yoff=0;
-					xoff=1;
-				} else if (m==2) {
-					yoff=-1;
-					xoff=0;
-				} else if (m==3) {
-					yoff=1;
-					xoff=0;
-				}
-
-				//this is a terribly messy bit of a game logic here--let's rethink the apex's
-				//behavior perhaps
-				//make sure the pairs have actually been filled (i.e., it found an eater in the given dir)
-				if (near_eater[m].first != 0 && near_eater[m].second != 0) {
-					int xe = near_eater[m].first + xoff;
-					int ye = near_eater[m].second + yoff;
-					int current_eater_pop_index = near_eater_idx[m];
-					//move the apex near the eater
-					(*world)[xe][ye] = (*world)[x][y]; 	
-					(*world)[x][y] = Entity();
-
-					//add to the apex's fitness
-					apex_pop[current_pop_index].fitness += eater_pop[current_eater_pop_index].fitness / 4.0;
-
-					//take from the eater's fitness
-					eater_pop[current_eater_pop_index].fitness -= eater_pop[current_eater_pop_index].fitness / 4.0;
-				}
-				//std::cout << "Test" << std::endl;
+				
 
 
 

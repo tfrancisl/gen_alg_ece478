@@ -23,13 +23,13 @@
 
 #define EATER_POP_SIZE              50              //Must be even (roulette rules)
 #define PLANT_POP_SIZE              270
-#define APEX_POP_SIZE               16              //Must be even (roulette rules)
+#define APEX_POP_SIZE               8              //Must be even (roulette rules)
 
-#define WORLD_SIZE 					40
+#define WORLD_SIZE 					40              // should be 4 more than a mutiple of (APEX_POP_SIZE/2)
 #define DAYS_PER_GENERATION 		250
-#define GENERATIONS					500
+#define GENERATIONS					2
 
-#define MAKE_CSV 1
+#define MAKE_CSV 0
 
 //returns a float between 0 & 1
 #define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))
