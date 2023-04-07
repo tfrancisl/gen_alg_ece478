@@ -84,9 +84,9 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 void GenAlgGame::GetRandomCoord(Entity ent) {
     int x,y;
 
-    do {
-        x = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
-        y = (int)std::round((RANDOM_NUM*(float)(WORLD_SIZE-1)));
+    do {	//clamp to 1 and WORLD_SIZE-2
+        x = 1 + RANDOM_NUM_RANGE(WORLD_SIZE-2);
+        y = 1 + RANDOM_NUM_RANGE(WORLD_SIZE-2);
     } while((*world)[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
 
     (*world)[x][y] = ent;
@@ -251,18 +251,22 @@ void GenAlgGame::ProgressTime() {
     int x,y,m,xf,yf,xb,yb, current_pop_index;
 	bitset<4> view(0);
 	bitset<2> action(0);
-	bitset<EATER_TRAITS+STATE_SIZE> rule_key(0);
-	bitset<EATER_GENE_LENGTH> rule(0);
+	bitset<EATER_TRAITS+STATE_SIZE> eater_rule_key(0);
+	bitset<EATER_GENE_LENGTH> eater_rule(0);
+	bitset<APEX_TRAITS+STATE_SIZE> apex_rule_key(0);
+	bitset<APEX_GENE_LENGTH> apex_rule(0);
 	float max_fitness = 0.0f;
 	string facing_type,behind_type;
 	unsigned long face_dir;
-
 
 	//std::cout << "day " << time_step << ": " << std::endl;
 
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
 			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
+				current_pop_index = (*world)[x][y].pop_index;
+				(*world)[x][y].last_action = time_step;
+
 
 		 	} else if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
 				
@@ -298,7 +302,7 @@ void GenAlgGame::ProgressTime() {
 				view[1] = (*world)[x][y].facing[1];
 
 				
-				if (xf < 0 || yf < 0 || xf>WORLD_SIZE-1 || yf>WORLD_SIZE-1) {  //must be looking at a wall
+				if (xf < 1 || yf < 1 || xf>WORLD_SIZE-2 || yf>WORLD_SIZE-2) {  //must be looking at a wall
 					view[2] = 0;
 					view[3] = 0;
 				} else {
@@ -319,7 +323,7 @@ void GenAlgGame::ProgressTime() {
  
 				}
 
-				if (xb < 0 || yb < 0 || xb>WORLD_SIZE-1 || yb>WORLD_SIZE-1) {  //must be looking at a wall
+				if (xb < 1 || yb < 1 || xb>WORLD_SIZE-2 || yb>WORLD_SIZE-2) {
 					behind_type = "wall";
 				} else {
 					behind_type = (*world)[xb][yb].type;
@@ -332,26 +336,26 @@ void GenAlgGame::ProgressTime() {
 					//#1
 					if (i==0) { //lowest bit = is there an apex near me
 						if (facing_type == "apex" || behind_type == "apex"){
-							rule_key[i] = 1;
+							eater_rule_key[i] = 1;
 						} else {
-							rule_key[i] = 0;
+							eater_rule_key[i] = 0;
 						}
 					} else if (i>0 && i<EATER_TRAITS) { //next 4 bits = what can i see + where am i looking
-						rule_key[i] = view[i];
+						eater_rule_key[i] = view[i];
 					} else { // last STATE_SIZE is the state
-						rule_key[i] = (*world)[x][y].state[i-EATER_TRAITS];
+						eater_rule_key[i] = (*world)[x][y].state[i-EATER_TRAITS];
 					}
 				}
 
-				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
-				rule = eater_pop[current_pop_index].rules[rule_key.to_ulong()];
-				//std::cout << "rule: " << rule << std::endl;
+				//std::cout << "eater_rule key: " << eater_rule_key.to_ulong() << std::endl;
+				eater_rule = eater_pop[current_pop_index].rules[eater_rule_key.to_ulong()];
+				//std::cout << "eater_rule: " << eater_rule << std::endl;
 
 				for(int i=0; i<EATER_GENE_LENGTH; i++) {
 					if (i<2) {
-						action[i] = rule[i];
+						action[i] = eater_rule[i];
 					} else {
-						(*world)[x][y].state[i-2] = rule[i];   //update the eater's state regardless
+						(*world)[x][y].state[i-2] = eater_rule[i];   //update the eater's state regardless
 					}
 				}
 
@@ -367,7 +371,7 @@ void GenAlgGame::ProgressTime() {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()+1);
 				} else if (m==3) {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
-				} else if ((view[2] || view[3]) && facing_type != "eater") { // (view[0] || view[1]) means they aren't looking at a wall
+				} else if ((view[2] || view[3]) && facing_type != "eater") { // (view[2] || view[3]) means they aren't looking at a wall
 					
 					//move the eater
 					if (m == 0) {
@@ -407,10 +411,10 @@ void GenAlgGame::RespawnPlantNearby(int x1, int y1) {
 	do {
 		x2 = (int)std::round( x1 + ((RANDOM_NUM-0.5)*(float)(4)));
 		y2 = (int)std::round( y1 + ((RANDOM_NUM-0.5)*(float)(4)));
-		if (x2 < 0) x2 = 0;
-		if (y2 < 0) y2 = 0;
-		if (x2 > WORLD_SIZE-1) x2 = WORLD_SIZE-1;
-		if (y2 > WORLD_SIZE-1) y2 = WORLD_SIZE-1;
+		if (x2 < 1) x2 = 1;
+		if (y2 < 1) y2 = 1;
+		if (x2 > WORLD_SIZE-2) x2 = WORLD_SIZE-2;
+		if (y2 > WORLD_SIZE-2) y2 = WORLD_SIZE-2;
 
 	} while((*world)[x2][y2].type != "none");
 

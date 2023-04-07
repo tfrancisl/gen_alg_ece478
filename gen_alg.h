@@ -10,7 +10,7 @@
 #define CHROMO_LENGTH				    (EATER_GENE_COUNT)*(EATER_GENE_LENGTH)
 
 //              ,2 bits for actions
-#define APEX_TRAITS                     5
+#define APEX_TRAITS                     8
 #define APEX_GENE_COUNT                 1<<(APEX_TRAITS+STATE_SIZE)
 #define APEX_GENE_LENGTH               	(2+STATE_SIZE)  //plus 2 for action
 #define APEX_CHROMO_LENGTH				(APEX_GENE_COUNT)*(APEX_GENE_LENGTH)
@@ -29,12 +29,12 @@
 #define DAYS_PER_GENERATION 		250
 #define GENERATIONS					500
 
-#define MAKE_CSV 1
+#define MAKE_CSV 0
 
 //returns a float between 0 & 1
 #define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))
 
 //returns a random integer between 0 and N-1
-#define RANDOM_NUM_RANGE(N)	rand() % (int)N
+#define RANDOM_NUM_RANGE(N)	rand() % (int)(N)
 
 #endif //GEN_ALG_
