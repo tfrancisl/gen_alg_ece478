@@ -9,8 +9,8 @@
 #define EATER_GENE_LENGTH               (2+STATE_SIZE)  //plus 2 for action
 #define CHROMO_LENGTH				    (EATER_GENE_COUNT)*(EATER_GENE_LENGTH)
 
-//4 bits for whether there is an eater within 10 grid spaces in a given direction, 2 bits for actions
-#define APEX_TRAITS                     6
+//3 bits for total plant count in facing grid, 3 bits for total eater count in facing grid, 2 bits for actions
+#define APEX_TRAITS                     8
 #define APEX_GENE_COUNT                 1<<(APEX_TRAITS+STATE_SIZE)
 #define APEX_GENE_LENGTH               	(2+STATE_SIZE)  //plus 2 for action
 #define APEX_CHROMO_LENGTH				(APEX_GENE_COUNT)*(APEX_GENE_LENGTH)

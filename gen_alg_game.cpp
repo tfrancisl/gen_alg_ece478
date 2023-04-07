@@ -283,7 +283,6 @@ void GenAlgGame::ProgressTime() {
 	float max_fitness = 0.0f;
 	string facing_type,behind_type;
 	unsigned long face_dir;
-	bool eater_found = false;
 
 	array<int, 4> pts = {0,0,0,0};
 	array<pair<int, int>, 4> near_eater = {pair<int,int>{0,0},pair<int,int>{0,0},pair<int,int>{0,0},pair<int,int>{0,0}};
@@ -297,10 +296,62 @@ void GenAlgGame::ProgressTime() {
 		for (y=0; y<WORLD_SIZE; y++) {
 			//apex only acts every 4 days...
 			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
+				int x1,y1,x2,y2;
+				int eater_count = 0;
+				int plant_count = 0;
+				bitset<3> etrs;
+				bitset<3> plts;
+
 				current_pop_index = (*world)[x][y].pop_index;
 				(*world)[x][y].last_action = time_step;
 
+				face_dir = (*world)[x][y].facing.to_ulong();
+				//then create x and y bounds of the 2x3/3x2 box based on facing dir.
+				if (face_dir == 0) {	//up
+					x1 = x-1;
+					x2 = x+1;
+					y1 = y-1;
+					y2 = y-2;
+				} else if (face_dir == 1) {		//right
+					x1 = x+1;
+					x2 = x+2;
+					y1 = y-1;
+					y2 = y+2;
+				} else if (face_dir == 2) {		//down
+					x1 = x-1;
+					x2 = x+1;
+					y1 = y+1;
+					y2 = y+2;
+				} else if (face_dir == 3){		//left
+					x1 = x-2;
+					x2 = x-1;
+					y1 = y-1;
+					y2 = y+2;
+				}
+
 				//fill in traits section of rule_key
+				for (int ax=x1; ax<x2; ax++) {
+					for (int ay=y1; ay<y2; ay++) {
+						if ((*world)[ax][ay].type == "eater" ) {
+							eater_count++;
+						} else if ((*world)[ax][ay].type == "plant") {
+							plant_count++;
+						}
+					}
+				}
+
+				etrs = bitset<3>(eater_count);
+				plts = bitset<3>(plant_count);
+
+				for (int i=0; i<APEX_TRAITS; i++) {
+					if (i<2) {
+						apex_rule_key[i] = facing[i];
+					} else if (i>2 && i<(APEX_TRAITS-3)) {
+						apex_rule_key[i] = etrs[i-2];
+					} else {
+						apex_rule_key[i] = plts[i-(APEX_TRAITS-3)];
+					}
+				}
 				
 				for (int i=APEX_TRAITS; i<(APEX_TRAITS+STATE_SIZE); i++) { // copy current state into key
 					apex_rule_key[i] = (*world)[x][y].state[i-APEX_TRAITS];
@@ -390,7 +441,7 @@ void GenAlgGame::ProgressTime() {
 							eater_rule_key[i] = 0;
 						}
 					} else if (i>0 && i<EATER_TRAITS) { //next 4 bits = what can i see + where am i looking
-						eater_rule_key[i] = view[i];
+						eater_rule_key[i] = view[i-1];
 					} else { // last STATE_SIZE is the state
 						eater_rule_key[i] = (*world)[x][y].state[i-EATER_TRAITS];
 					}
