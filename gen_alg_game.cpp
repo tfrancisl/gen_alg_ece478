@@ -10,7 +10,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
     bitset<CHROMO_LENGTH> genes1;
 	Entity tmp_ent;
-	Chromosome<GENE_LENGTH,GENE_COUNT> tmp_chrm;
+	Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT> tmp_chrm;
     int x,y;
 
 	this->world = new array<array<Entity, WORLD_SIZE>, WORLD_SIZE>;
@@ -23,7 +23,8 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
     this->plant_pop_size = plant_pop_size;
 
 	//make empty eater pop vector
-	eater_pop.assign(this->eater_pop_size, Chromosome<GENE_LENGTH,GENE_COUNT>());
+	eater_pop.assign(this->eater_pop_size, Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>());
+	//apex_pop.assign(APEX_POP_SIZE, Chromosome<APEX_GENE_LENGTH, APEX_GENE_COUNT>());
 
     time_step = 0;
     gen = 0;
@@ -37,7 +38,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 			}
 		}
 
-		tmp_chrm = Chromosome<GENE_LENGTH,GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH);
+		tmp_chrm = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH);
 
 		tmp_ent = Entity("eater");
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
@@ -50,6 +51,29 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
         GetRandomCoord(tmp_ent);
 		
 	}
+
+	/*for (int i=0; i<APEX_POP_SIZE; i++) {
+		genes1.reset();
+
+		for (int j=0; j<APEX_CHROMO_LENGTH; j++) {
+			if (RANDOM_NUM < 0.5) {
+				genes1[j].flip();
+			}
+		}
+
+		tmp_chrm = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes1, 1.0f, APEX_CHROMO_LENGTH);
+
+		tmp_ent = Entity("apex");
+		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
+		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
+
+		tmp_chrm.BitsToRules();
+		apex_pop.at(i) = tmp_chrm;
+
+		tmp_ent.pop_index = i;
+        GetRandomCoord(tmp_ent);
+	}*/
+
 
 	//create the plants and place them in the world
 	for (int i=0; i<plant_pop_size; i++) {
@@ -70,28 +94,41 @@ void GenAlgGame::GetRandomCoord(Entity ent) {
 
 void GenAlgGame::Generation() {
 
-    vector<Chromosome<GENE_LENGTH,GENE_COUNT>> tmp_eater_population;
-    int max_fitness,total_fitness;
+    vector<Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>> tmp_eater_population;
+	vector<Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>> tmp_apex_population;
+    int max_fitness_eaters = 0.0f,total_fitness_eaters = 0.0f;
+	int max_fitness_apex = 0.0f, total_fitness_apex = 0.0f;
     int x,y;
 	int current_pop_index;
 
     gen++;
 
 	//make empty tmp eater population vector
-    tmp_eater_population.assign(this->eater_pop_size, Chromosome<GENE_LENGTH,GENE_COUNT>());;
+    tmp_eater_population.assign(this->eater_pop_size, Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>());
+	tmp_apex_population.assign(APEX_POP_SIZE, Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>());
 
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
-        max_fitness = ProgressTime2();
+       	ProgressTime();
     }
 
-    total_fitness = 0.0f;
 	for (auto i = eater_pop.begin(); i < eater_pop.end(); ++i) {
-		total_fitness += i->fitness;
+		if (i->fitness > max_fitness_eaters) {
+			max_fitness_eaters = i->fitness;
+		}
+		total_fitness_eaters += i->fitness;
+	}
+
+	for (auto i = apex_pop.begin(); i < apex_pop.end(); ++i) {
+		if (i->fitness > max_fitness_apex) {
+			max_fitness_apex = i->fitness;
+		}
+		total_fitness_apex += i->fitness;
 	}
 
 
+	//TODO: add apex to csv
     #if MAKE_CSV
-    std::cout << gen << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << std::endl;
+    std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << std::endl;
     #endif
 
 	 //clear out the world
@@ -103,12 +140,12 @@ void GenAlgGame::Generation() {
     for (int i=0; i<EATER_POP_SIZE/2; i++) {
         bitset<CHROMO_LENGTH> genes1,genes2;
         Entity child1, child2;
-	    Chromosome<GENE_LENGTH,GENE_COUNT> new_chrm1,new_chrm2;
+	    Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT> new_chrm1,new_chrm2;
 
 
         //Select two
-        genes1 = Roulette(total_fitness, eater_pop);
-        genes2 = Roulette(total_fitness, eater_pop);
+        genes1 = Roulette(total_fitness_eaters, eater_pop);
+        genes2 = Roulette(total_fitness_eaters, eater_pop);
 
         //crossover
         Crossover(genes1, genes2);
@@ -121,8 +158,8 @@ void GenAlgGame::Generation() {
 		Deletion(genes1);
 		Deletion(genes2);
 
-        new_chrm1 = Chromosome<GENE_LENGTH,GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH); 
-        new_chrm2 = Chromosome<GENE_LENGTH,GENE_COUNT>(genes2, 1.0f, CHROMO_LENGTH); 
+        new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH); 
+        new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 1.0f, CHROMO_LENGTH); 
 
         //set up the new entity
         child1 = Entity("eater");
@@ -151,6 +188,58 @@ void GenAlgGame::Generation() {
 	eater_pop.clear();
 	eater_pop = tmp_eater_population;
 
+
+	/*for (int i=0; i<APEX_POP_SIZE/2; i++) {
+        bitset<CHROMO_LENGTH> genes1,genes2;
+        Entity child1, child2;
+	    Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT> new_chrm3,new_chrm4;
+
+
+        //Select two
+        genes1 = Roulette(total_fitness_apex, apex_pop);
+        genes2 = Roulette(total_fitness_apex, apex_pop);
+
+        //crossover
+        Crossover(genes1, genes2);
+        
+        //mutate
+        Mutate(genes1);
+        Mutate(genes2);
+
+		//random deletion
+		Deletion(genes1);
+		Deletion(genes2);
+
+        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH); 
+        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes2, 1.0f, CHROMO_LENGTH); 
+
+        //set up the new entity
+        child1 = Entity("apex");
+        child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
+		child1.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
+        new_chrm3.BitsToRules();
+        child2 = Entity("apex");
+        child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
+		child2.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
+        new_chrm4.BitsToRules();
+
+        if (i==0) {
+            child1.spec = 1;
+        }
+        
+		child1.pop_index = 2*i;
+		child2.pop_index = 2*i+1;
+
+        apex_pop.at(2*i) = new_chrm3;
+        apex_pop.at(2*i+1) = new_chrm4;
+
+		//place the two new eaters into the empty world
+		GetRandomCoord(child1);
+		GetRandomCoord(child2);
+    }
+	apex_pop.clear();
+	apex_pop = tmp_apex_population;*/
+
     //create the plants and place them in the world
     for (int i=0; i<PLANT_POP_SIZE; i++) {
         GetRandomCoord(Entity("plant"));
@@ -158,12 +247,12 @@ void GenAlgGame::Generation() {
 
 }
 
-float GenAlgGame::ProgressTime2() {
+void GenAlgGame::ProgressTime() {
     int x,y,m,xf,yf,xb,yb, current_pop_index;
 	bitset<4> view(0);
 	bitset<2> action(0);
-	bitset<GENE_LENGTH+2> rule_key(0);
-	bitset<GENE_LENGTH> rule(0);
+	bitset<EATER_TRAITS+STATE_SIZE> rule_key(0);
+	bitset<EATER_GENE_LENGTH> rule(0);
 	float max_fitness = 0.0f;
 	string facing_type,behind_type;
 	unsigned long face_dir;
@@ -173,7 +262,9 @@ float GenAlgGame::ProgressTime2() {
 
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
-			if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
+			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
+
+		 	} else if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
 				
 				current_pop_index = (*world)[x][y].pop_index;
 				//std::cout << "pop index: " << current_pop_index << std::endl;
@@ -234,40 +325,34 @@ float GenAlgGame::ProgressTime2() {
 					behind_type = (*world)[xb][yb].type;
 				}
 
-				for (int i=0; i<(2+GENE_LENGTH); i++) {
+				for (int i=0; i<(EATER_TRAITS+STATE_SIZE); i++) {
 					
 
 					//I think this first one is right, verify
 					//#1
-					if (i<4) {
+					if (i==0) { //lowest bit = is there an apex near me
+						if (facing_type == "apex" || behind_type == "apex"){
+							rule_key[i] = 1;
+						} else {
+							rule_key[i] = 0;
+						}
+					} else if (i>0 && i<EATER_TRAITS) { //next 4 bits = what can i see + where am i looking
 						rule_key[i] = view[i];
-					} else {
-						rule_key[i] = (*world)[x][y].state[i-STATE_SIZE];
+					} else { // last STATE_SIZE is the state
+						rule_key[i] = (*world)[x][y].state[i-EATER_TRAITS];
 					}
-				
-					//if (i<STATE_SIZE) {
-					//	rule_key[i] = (*world)[x][y].state[i];
-					//} else {
-					//	rule_key[i] = view[i-STATE_SIZE];
-					//}
 				}
 
 				//std::cout << "rule key: " << rule_key.to_ulong() << std::endl;
 				rule = eater_pop[current_pop_index].rules[rule_key.to_ulong()];
 				//std::cout << "rule: " << rule << std::endl;
 
-				for(int i=0; i<GENE_LENGTH; i++) {
+				for(int i=0; i<EATER_GENE_LENGTH; i++) {
 					if (i<2) {
 						action[i] = rule[i];
 					} else {
 						(*world)[x][y].state[i-2] = rule[i];   //update the eater's state regardless
 					}
-
-					//if (i<STATE_SIZE) {
-					//	(*world)[x][y].state[i] = rule[i];
-					//} else {
-					//	action[i-STATE_SIZE] = rule[i];
-					//}
 				}
 
 				m = action.to_ulong();
@@ -313,7 +398,7 @@ float GenAlgGame::ProgressTime2() {
 	}
 
 	time_step++;	//increment time step
-	return max_fitness;
+	//return max_fitness;
 }
 
 void GenAlgGame::RespawnPlantNearby(int x1, int y1) {

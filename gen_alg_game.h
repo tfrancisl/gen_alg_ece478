@@ -16,11 +16,13 @@ public:
     int time_step,eater_pop_size,plant_pop_size,gen;
     array<array<Entity, WORLD_SIZE>, WORLD_SIZE> *world;
 
-    vector< Chromosome<GENE_LENGTH, GENE_COUNT> > eater_pop;
+    vector< Chromosome<EATER_GENE_LENGTH, EATER_GENE_COUNT> > eater_pop;
+    vector< Chromosome<APEX_GENE_LENGTH, APEX_GENE_COUNT> > apex_pop;
 
-    float ProgressTime2();      //game logic more similar to the original plant and eater 
+    void ProgressTime();      //game logic more similar to the original plant and eater 
 
     void Generation();
+    //void ApexGeneration();
     void RespawnPlantNearby(int x1, int y1);
 
     void GetRandomCoord(Entity ent);

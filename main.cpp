@@ -12,7 +12,6 @@ int main(void) {
 	srand((int)time(NULL));
 
     GenAlgGame *game1 = new GenAlgGame(EATER_POP_SIZE, PLANT_POP_SIZE);
-    int max_fitness;
 
 
     #if MAKE_CSV
@@ -25,7 +24,7 @@ int main(void) {
 
 	#if !MAKE_CSV
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
-		max_fitness = game1->ProgressTime2();
+		game1->ProgressTime();
 		
 		WorldToStrings(*(game1->world));
 		
@@ -53,6 +52,8 @@ vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w) {
 				ent_sym = "P";
 			} else if(w[x][y].type == "none") {
 				ent_sym = " ";
+			} else if(w[x][y].type == "apex") {
+				ent_sym = "A";
 			} else { //error case
 				ent_sym = "X";
 			}
