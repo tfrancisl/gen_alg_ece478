@@ -23,12 +23,14 @@ int main(void) {
         game1->Generation();
     }
 
+	#if !MAKE_CSV
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
 		max_fitness = game1->ProgressTime2();
-		#if !MAKE_CSV
+		
 		WorldToStrings(*(game1->world));
-		#endif
+		
 	}
+	#endif
 
 }
 

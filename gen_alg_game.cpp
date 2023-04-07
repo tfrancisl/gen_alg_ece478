@@ -43,20 +43,17 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
 		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
 
-		//tmp_ent.genes.BitsToRules();
 		tmp_chrm.BitsToRules();
 		eater_pop.at(i) = tmp_chrm;
 
-        GetRandomCoord(tmp_ent);
 		tmp_ent.pop_index = i;
+        GetRandomCoord(tmp_ent);
 		
 	}
 
 	//create the plants and place them in the world
 	for (int i=0; i<plant_pop_size; i++) {
-		tmp_ent = Entity("plant");
-
-		GetRandomCoord(tmp_ent);
+		GetRandomCoord(Entity("plant"));
 	}
 }
 
@@ -88,14 +85,10 @@ void GenAlgGame::Generation() {
     }
 
     total_fitness = 0.0f;
-    for (x=0; x<WORLD_SIZE; x++) {
-        for (y=0; y<WORLD_SIZE; y++) {
-            if((*world)[x][y].type == "eater") {
-				current_pop_index = (*world)[x][y].pop_index;
-				total_fitness += eater_pop[current_pop_index].fitness;
-            }
-        }
-    }
+	for (auto i = eater_pop.begin(); i < eater_pop.end(); ++i) {
+		total_fitness += i->fitness;
+	}
+
 
     #if MAKE_CSV
     std::cout << gen << "," << max_fitness << "," << total_fitness/(float)(EATER_POP_SIZE) << "," << std::endl;
@@ -134,30 +127,29 @@ void GenAlgGame::Generation() {
         //set up the new entity
         child1 = Entity("eater");
         child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
+		child1.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
         new_chrm1.BitsToRules();
         child2 = Entity("eater");
         child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
+		child2.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
         new_chrm2.BitsToRules();
 
         if (i==0) {
             child1.spec = 1;
         }
         
-		child1.pop_index = i;
-		child2.pop_index = 2*i;
+		child1.pop_index = 2*i;
+		child2.pop_index = 2*i+1;
 
-        tmp_eater_population.at(i) = new_chrm1;
-        tmp_eater_population.at(2*i) = new_chrm2;
+        tmp_eater_population.at(2*i) = new_chrm1;
+        tmp_eater_population.at(2*i+1) = new_chrm2;
 
+		//place the two new eaters into the empty world
 		GetRandomCoord(child1);
 		GetRandomCoord(child2);
     }
 	eater_pop.clear();
 	eater_pop = tmp_eater_population;
-
-	//for (int i=0; i<EATER_POP_SIZE; i++) {
-	//	GetRandomCoord();
-	//}
 
     //create the plants and place them in the world
     for (int i=0; i<PLANT_POP_SIZE; i++) {
@@ -167,37 +159,48 @@ void GenAlgGame::Generation() {
 }
 
 float GenAlgGame::ProgressTime2() {
-    int x,y,m,xf,yf, current_pop_index;
+    int x,y,m,xf,yf,xb,yb, current_pop_index;
 	bitset<4> view(0);
 	bitset<2> action(0);
 	bitset<GENE_LENGTH+2> rule_key(0);
 	bitset<GENE_LENGTH> rule(0);
 	float max_fitness = 0.0f;
-	string facing_type;
+	string facing_type,behind_type;
 	unsigned long face_dir;
 
 
+	//std::cout << "day " << time_step << ": " << std::endl;
+
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
-			if((*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
+			if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
 				
 				current_pop_index = (*world)[x][y].pop_index;
+				//std::cout << "pop index: " << current_pop_index << std::endl;
 				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
 
 				face_dir = (*world)[x][y].facing.to_ulong();
 
 				if (face_dir == 0) {
 					xf = x;
+					xb = x;
 					yf = y-1;
+					yb = y+1;
 				} else if (face_dir == 1) {
 					xf = x+1;
+					xb = x-1;
 					yf = y;
+					yb = y;
 				} else if (face_dir == 2) {
 					xf = x;
+					xb = x;
 					yf = y+1;
-				} else if (face_dir ==3){
+					yb = y-1;
+				} else if (face_dir == 3){
 					xf = x-1;
+					xb = x+1;
 					yf = y; 
+					yb = y; 
 				}
 
 				view[0] = (*world)[x][y].facing[0];
@@ -213,6 +216,7 @@ float GenAlgGame::ProgressTime2() {
 					if(facing_type == "none") {
 						view[2] = 1;
 						view[3] = 0;
+
 					} else if (facing_type == "eater") {
 						view[2] = 0;
 						view[3] = 1;
@@ -224,18 +228,23 @@ float GenAlgGame::ProgressTime2() {
  
 				}
 
+				if (xb < 0 || yb < 0 || xb>WORLD_SIZE-1 || yb>WORLD_SIZE-1) {  //must be looking at a wall
+					behind_type = "wall";
+				} else {
+					behind_type = (*world)[xb][yb].type;
+				}
+
 				for (int i=0; i<(2+GENE_LENGTH); i++) {
 					
 
 					//I think this first one is right, verify
 					//#1
-					if (i<STATE_SIZE) {
+					if (i<4) {
 						rule_key[i] = view[i];
 					} else {
 						rule_key[i] = (*world)[x][y].state[i-STATE_SIZE];
 					}
 				
-					//#2
 					//if (i<STATE_SIZE) {
 					//	rule_key[i] = (*world)[x][y].state[i];
 					//} else {
@@ -253,9 +262,16 @@ float GenAlgGame::ProgressTime2() {
 					} else {
 						(*world)[x][y].state[i-2] = rule[i];   //update the eater's state regardless
 					}
+
+					//if (i<STATE_SIZE) {
+					//	(*world)[x][y].state[i] = rule[i];
+					//} else {
+					//	action[i-STATE_SIZE] = rule[i];
+					//}
 				}
 
 				m = action.to_ulong();
+				//std::cout << m << std::endl;
 				//00 = forward, 01 = backward, 10 = +1 to facing, 11 = -1 to facing
 
 				if (max_fitness < eater_pop[current_pop_index].fitness) {
@@ -268,21 +284,33 @@ float GenAlgGame::ProgressTime2() {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
 				} else if ((view[2] || view[3]) && facing_type != "eater") { // (view[0] || view[1]) means they aren't looking at a wall
 					
-					(*world)[xf][yf] = (*world)[x][y]; 			//move the eater
-					(*world)[x][y] = Entity();					//replace it with nothing
+					//move the eater
+					if (m == 0) {
+						(*world)[xf][yf] = (*world)[x][y]; 	
+						(*world)[x][y] = Entity();	
 
-					if(facing_type == "plant") {
-						eater_pop[current_pop_index].fitness += 1.0;
-						//GetRandomCoord(Entity("plant"));
-						RespawnPlantNearby(xf,yf);
+						if(facing_type == "plant") {
+							eater_pop[current_pop_index].fitness += 1.0;
+							//GetRandomCoord(Entity("plant"));
+							RespawnPlantNearby(xf,yf);
+						}
+
+					} else if (behind_type != "wall" && behind_type != "eater") {	//unfortunately I have to manually check the grid behind them
+						(*world)[xb][yb] = (*world)[x][y]; 
+						(*world)[x][y] = Entity();	
+
+						if(behind_type == "plant") {
+							eater_pop[current_pop_index].fitness += 1.0;
+							//GetRandomCoord(Entity("plant"));
+							RespawnPlantNearby(xb,yb);
+						}
 					}
-				}
-				
+		
+				}	
 			}
 		}
 
 	}
-
 
 	time_step++;	//increment time step
 	return max_fitness;
@@ -290,7 +318,6 @@ float GenAlgGame::ProgressTime2() {
 
 void GenAlgGame::RespawnPlantNearby(int x1, int y1) {
     int x2,y2;
-	Entity tmp_ent = Entity("plant");
 
 	do {
 		x2 = (int)std::round( x1 + ((RANDOM_NUM-0.5)*(float)(4)));
@@ -302,5 +329,5 @@ void GenAlgGame::RespawnPlantNearby(int x1, int y1) {
 
 	} while((*world)[x2][y2].type != "none");
 
-	(*world)[x2][y2] = tmp_ent;
+	(*world)[x2][y2] = Entity("plant");;
 }
