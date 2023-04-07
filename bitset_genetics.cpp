@@ -1,7 +1,12 @@
-#include "bitset_genetics.h"
+#include <bitset>
+#include "entity.h"
+#include <vector>
+using std::bitset;
+using std::vector;
 
-void Mutate(bitset<CHROMO_LENGTH> &bits) {
-	for (int i=0; i<CHROMO_LENGTH; i++) {
+template<int gene_len, int gene_count>
+void Mutate(bitset<gene_len*gene_count> &bits) {
+	for (int i=0; i<(gene_len*gene_count); i++) {
 		if (RANDOM_NUM < MUTATION_RATE) {
 			bits[i].flip();
 		}
@@ -10,16 +15,17 @@ void Mutate(bitset<CHROMO_LENGTH> &bits) {
 	return;
 }
 
-void Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspring2) {
-  bitset<CHROMO_LENGTH> t1,t2;
+template<int gene_len, int gene_count>
+void Crossover(bitset<gene_len*gene_count> &offspring1, bitset<gene_len*gene_count> &offspring2) {
+  bitset<gene_len*gene_count> t1,t2;
   int crossover;
 
   //dependent on the crossover rate
   if (RANDOM_NUM < CROSSOVER_RATE)
   {
     //create a random crossover point
-    crossover = (int)(RANDOM_NUM*CHROMO_LENGTH);
-	for (int i=0; i<CHROMO_LENGTH; i++) {
+    crossover = (int)(RANDOM_NUM*(gene_len*gene_count));
+	for (int i=0; i<(gene_len*gene_count); i++) {
 		if (i < crossover) {
 			t1[i] = offspring1[i];
 			t2[i] = offspring2[i];
@@ -33,18 +39,46 @@ void Crossover(bitset<CHROMO_LENGTH> &offspring1, bitset<CHROMO_LENGTH> &offspri
   }
 }
 
-void Deletion(bitset<CHROMO_LENGTH> &bits) {
+template<int gene_len, int gene_count>
+void Deletion(bitset<gene_len*gene_count> &bits) {
 	int del_pt,del_len;
 
 	if (RANDOM_NUM < DELETION_RATE) {
-		del_pt = (int)(RANDOM_NUM*CHROMO_LENGTH);
+		del_pt = (int)(RANDOM_NUM*(gene_len*gene_count));
 		del_len = RANDOM_NUM_RANGE(MAX_DELETION_LENGTH) + 1;
 
 		for (int i=del_pt; i<del_pt+del_len; i++) {
-			if (i<CHROMO_LENGTH) {
+			if (i<(gene_len*gene_count)) {
 				bits[i] = 0;
 			}
 		}
 	}
 
+}
+
+
+template<int gene_len, int gene_count>
+bitset<gene_len*gene_count> Roulette(int total_fitness, vector<Chromosome<gene_len, gene_count>> population) {
+	//generate a random number between 0 & total fitness count
+	float rand_fit = (float)(RANDOM_NUM * total_fitness);
+
+	//go through the chromosones adding up the fitness so far
+	float track_fitness = 0.0f;
+	
+	for (auto i = population.begin(); i != population.end(); ++i)
+	{
+		track_fitness += i->fitness;
+		
+		//if the fitness so far > random number return the chromo at this point
+		if (track_fitness >= rand_fit)
+		{
+			return i->bits;
+		}
+
+	}
+
+	//Should never, ever have to run. 
+	//If the population passed to this and the total fitness calculated come from the same place, track_fitness will always exceed rand_fit at some point
+	std::cout << "Failed to a select a roulette candidate!!! Cumulative fitness: " << track_fitness << "/" << rand_fit << " (rand fitness), " << total_fitness << " (total fitness)." << std::endl;
+	return bitset<gene_len*gene_count>();
 }
