@@ -296,7 +296,7 @@ void GenAlgGame::ProgressTime() {
 		for (y=0; y<WORLD_SIZE; y++) {
 			//apex only acts every 4 days...
 			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
-				int x1,y1,x2,y2;
+				int x1,y1,x2,y2,px,py;
 				int eater_count = 0;
 				int plant_count = 0;
 				bitset<3> etrs;
@@ -310,13 +310,13 @@ void GenAlgGame::ProgressTime() {
 				if (face_dir == 0) {	//up
 					x1 = x-1;
 					x2 = x+1;
-					y1 = y-1;
-					y2 = y-2;
+					y1 = y-2;
+					y2 = y-1;
 				} else if (face_dir == 1) {		//right
 					x1 = x+1;
 					x2 = x+2;
 					y1 = y-1;
-					y2 = y+2;
+					y2 = y+1;
 				} else if (face_dir == 2) {		//down
 					x1 = x-1;
 					x2 = x+1;
@@ -326,7 +326,7 @@ void GenAlgGame::ProgressTime() {
 					x1 = x-2;
 					x2 = x-1;
 					y1 = y-1;
-					y2 = y+2;
+					y2 = y+1;
 				}
 
 				//fill in traits section of rule_key
@@ -345,7 +345,7 @@ void GenAlgGame::ProgressTime() {
 
 				for (int i=0; i<APEX_TRAITS; i++) {
 					if (i<2) {
-						apex_rule_key[i] = facing[i];
+						apex_rule_key[i] = (*world)[x][y].facing[i];
 					} else if (i>2 && i<(APEX_TRAITS-3)) {
 						apex_rule_key[i] = etrs[i-2];
 					} else {
@@ -368,6 +368,48 @@ void GenAlgGame::ProgressTime() {
 				}
 
 				m = action.to_ulong();
+				//00 = choose a random grid square.
+					//if theres a plant, do nothing. 
+					//if theres nothing, plant a plant and lose a fitness. 
+					//if theres an eater, take from its fitness (fitness can't go below 0.5)
+ 
+				//01 = eat the first plant you find in your six squares, gain a fitness, 
+				//10 = rotate +1,  
+				//11 = rotate -1, -> probably do something else
+				if (m==0) {
+					px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+					py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+
+					string face_type = (*world)[px][py].type;
+
+					if (face_type == "eater") {
+						if ( eater_pop[(*world)[px][py].pop_index].fitness >= 2.5 ) {
+							eater_pop[(*world)[px][py].pop_index].fitness -= 2.0f;
+							apex_pop[current_pop_index].fitness += 2.0f;
+						}
+						//send trigger to eater goes here
+
+					} else if (face_type == "none") {
+						if ( apex_pop[current_pop_index].fitness >= 1.5) {
+							(*world)[px][py] = Entity("plant");
+							apex_pop[current_pop_index].fitness -= 1.0f;
+						}
+					} else if (face_type != "plant" && face_type == "apex") {
+						std::cout << "apex loc: (" << x << "," << y << ")" << std::endl;
+						std::cout << "(x1,x2): " << x1 << " " << x2 << " (y1,y2): " << y1 << " " << y2 << std::endl;
+						std::cout << "random coords (x, y): " << px << "," << py << std::endl; 
+
+						//std::cout << "Something is wrong in apex behavior :) face type: " << face_type << std::endl;
+					}
+
+
+				} else if (m==1) {
+
+				} else if (m==2) {
+					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()+1);
+				} else if (m==3) {
+					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
+				}
 				
 
 
@@ -435,6 +477,7 @@ void GenAlgGame::ProgressTime() {
 
 				for (int i=0; i<(EATER_TRAITS+STATE_SIZE); i++) {
 					if (i==0) { //lowest bit = is there an apex near me
+					//	might switch this to "did an apex steal from me recently"... triggered by the apex stealing
 						if (facing_type == "apex" || behind_type == "apex"){
 							eater_rule_key[i] = 1;
 						} else {
@@ -463,15 +506,11 @@ void GenAlgGame::ProgressTime() {
 				//std::cout << m << std::endl;
 				//00 = forward, 01 = backward, 10 = +1 to facing, 11 = -1 to facing
 
-				if (max_fitness < eater_pop[current_pop_index].fitness) {
-					max_fitness = eater_pop[current_pop_index].fitness;
-				}
-
 				if (m==2) {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()+1);
 				} else if (m==3) {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
-				} else if ((view[2] || view[3]) && facing_type != "eater") { // (view[2] || view[3]) means they aren't looking at a wall
+				} else if ((view[2] || view[3]) && facing_type != "eater" && facing_type != "apex") { // (view[2] || view[3]) means they aren't looking at a wall
 					
 					//move the eater
 					if (m == 0) {
@@ -484,7 +523,7 @@ void GenAlgGame::ProgressTime() {
 							RespawnPlantNearby(xf,yf);
 						}
 
-					} else if (behind_type != "wall" && behind_type != "eater") {	//unfortunately I have to manually check the grid behind them
+					} else if (behind_type != "wall" && behind_type != "eater" && behind_type != "apex") {	//unfortunately I have to manually check the grid behind them
 						(*world)[xb][yb] = (*world)[x][y]; 
 						(*world)[x][y] = Entity();	
 
@@ -502,7 +541,6 @@ void GenAlgGame::ProgressTime() {
 	}
 
 	time_step++;	//increment time step
-	//return max_fitness;
 }
 
 void GenAlgGame::RespawnPlantNearby(int x1, int y1) {

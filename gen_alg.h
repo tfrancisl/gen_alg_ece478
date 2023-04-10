@@ -27,9 +27,9 @@
 
 #define WORLD_SIZE 					40              // should be 4 more than a mutiple of (APEX_POP_SIZE/2)
 #define DAYS_PER_GENERATION 		250
-#define GENERATIONS					2
+#define GENERATIONS					2000
 
-#define MAKE_CSV 0
+#define MAKE_CSV 1
 
 //returns a float between 0 & 1
 #define RANDOM_NUM			((float)rand()/((float)(RAND_MAX)+1))
