@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-avg_n = 26
+avg_n = 100
 
 if len(sys.argv) < 3:
     print("error provide csv name and header row #")
@@ -28,3 +28,13 @@ ax.clear()
 ax.plot(data['generation'], data['avg_fitness_apex'])
 ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['avg_fitness_apex'], avg_n))
 fig.savefig(base_name + "_avg_fitness_apex.png")
+ax.clear()
+
+ax.plot(data['generation'], data['max_fitness'])
+ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['max_fitness'], avg_n))
+fig.savefig(base_name + "_fitness.png")
+ax.clear()
+
+ax.plot(data['generation'], data['max_fitness_apex'])
+ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['max_fitness_apex'], avg_n))
+fig.savefig(base_name + "_fitness_apex.png")

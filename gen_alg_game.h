@@ -26,6 +26,7 @@ public:
     void RespawnPlantNearby(int x1, int y1);
 
     void GetRandomCoord(Entity ent);
+    void GetRandomCoord(Entity ent, int r);
 
 };
 

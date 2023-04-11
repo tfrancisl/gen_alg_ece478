@@ -22,12 +22,12 @@
 #define MAX_DELETION_LENGTH         3*EATER_GENE_LENGTH
 
 #define EATER_POP_SIZE              50              //Must be even (roulette rules)
-#define PLANT_POP_SIZE              270
-#define APEX_POP_SIZE               8              //Must be even (roulette rules)
+#define PLANT_POP_SIZE              100
+#define APEX_POP_SIZE               16              //Must be even (roulette rules)
 
 #define WORLD_SIZE 					40              // should be 4 more than a mutiple of (APEX_POP_SIZE/2)
 #define DAYS_PER_GENERATION 		250
-#define GENERATIONS					2000
+#define GENERATIONS					2500
 
 #define MAKE_CSV 1
 

@@ -48,7 +48,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
 		if (i==apex_per_row) current_row++;
 
-		tmp_chrm2 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes2, 1.0f, APEX_CHROMO_LENGTH);
+		tmp_chrm2 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes2, 5.0f, APEX_CHROMO_LENGTH);
 
 		tmp_ent = Entity("apex");
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
@@ -85,7 +85,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 			}
 		}
 
-		tmp_chrm = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH);
+		tmp_chrm = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 5.0f, CHROMO_LENGTH);
 
 		tmp_ent = Entity("eater");
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
@@ -101,7 +101,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
 	//create the plants and place them in the world
 	for (int i=0; i<plant_pop_size; i++) {
-		GetRandomCoord(Entity("plant"));
+		GetRandomCoord(Entity("plant"), WORLD_SIZE/5);
 	}
 }
 
@@ -116,6 +116,17 @@ void GenAlgGame::GetRandomCoord(Entity ent) {
     (*world)[x][y] = ent;
 }
 
+void GenAlgGame::GetRandomCoord(Entity ent, int r) {
+    int x,y;
+
+    do {	//clamp to 1 and WORLD_SIZE-2
+        x = r + RANDOM_NUM_RANGE(WORLD_SIZE-r);
+        y = r + RANDOM_NUM_RANGE(WORLD_SIZE-r);
+    } while((*world)[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
+
+    (*world)[x][y] = ent;
+}
+
 void GenAlgGame::Generation() {
 
     vector<Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>> tmp_eater_population;
@@ -125,7 +136,7 @@ void GenAlgGame::Generation() {
     int x,y,ax,ay;
 	int current_pop_index;
 	int current_row = 0;
-	int apex_per_row = APEX_POP_SIZE/2;
+	int apex_per_row = APEX_POP_SIZE/4;
 
     gen++;
 
@@ -151,8 +162,6 @@ void GenAlgGame::Generation() {
 		total_fitness_apex += i->fitness;
 	}
 
-
-	//TODO: add apex to csv
     #if MAKE_CSV
     std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(APEX_POP_SIZE) << std::endl;
     #endif
@@ -183,8 +192,8 @@ void GenAlgGame::Generation() {
 		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
 		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
 
-        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 1.0f, CHROMO_LENGTH); 
-        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 1.0f, CHROMO_LENGTH); 
+        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 5.0f, CHROMO_LENGTH); 
+        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 5.0f, CHROMO_LENGTH); 
 
         //set up the new entity
         child1 = Entity("apex");
@@ -202,14 +211,21 @@ void GenAlgGame::Generation() {
         apex_pop.at(2*i) = new_chrm3;
         apex_pop.at(2*i+1) = new_chrm4;
 
-		ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + (WORLD_SIZE/10);
-		(*world)[ax][(WORLD_SIZE-1)/4] = child1;
-		(*world)[ax][(3*(WORLD_SIZE-1))/4] = child2;
+		//ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + (WORLD_SIZE/10);
+		//(*world)[ax][(WORLD_SIZE-1)/4] = child1;
+		//(*world)[ax][(3*(WORLD_SIZE-1))/4] = child2;
+
+		ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + 5;
+		(*world)[ax][((2*current_row+1)*(WORLD_SIZE-1))/5] = child1;
+		(*world)[ax][((2*current_row+2)*(WORLD_SIZE-1))/5] = child2;
 
 
 		//place the two new eaters into the empty world
 		//GetRandomCoord(child1);
 		//GetRandomCoord(child2);
+		if((i%apex_per_row)==0) {
+			current_row = ++current_row % 2;
+		}
     }
 	apex_pop.clear();
 	apex_pop = tmp_apex_population;
@@ -235,8 +251,8 @@ void GenAlgGame::Generation() {
 		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1);
 		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2);
 
-        new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 1.0f, CHROMO_LENGTH); 
-        new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 1.0f, CHROMO_LENGTH); 
+        new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 5.0f, CHROMO_LENGTH); 
+        new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 5.0f, CHROMO_LENGTH); 
 
         //set up the new entity
         child1 = Entity("eater");
@@ -267,7 +283,7 @@ void GenAlgGame::Generation() {
 
     //create the plants and place them in the world
     for (int i=0; i<PLANT_POP_SIZE; i++) {
-        GetRandomCoord(Entity("plant"));
+        GetRandomCoord(Entity("plant"), WORLD_SIZE/5);
     }
 
 }
@@ -284,17 +300,11 @@ void GenAlgGame::ProgressTime() {
 	string facing_type,behind_type;
 	unsigned long face_dir;
 
-	array<int, 4> pts = {0,0,0,0};
-	array<pair<int, int>, 4> near_eater = {pair<int,int>{0,0},pair<int,int>{0,0},pair<int,int>{0,0},pair<int,int>{0,0}};
-	array<int, 4> near_eater_idx = {0,0,0,0};
-	int prox = 10;
-	int yoff, xoff;
 
 	//std::cout << "day " << time_step << ": " << std::endl;
 
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
-			//apex only acts every 4 days...
 			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
 				int x1,y1,x2,y2,px,py;
 				int eater_count = 0;
@@ -394,7 +404,7 @@ void GenAlgGame::ProgressTime() {
 							(*world)[px][py] = Entity("plant");
 							apex_pop[current_pop_index].fitness -= 1.0f;
 						}
-					} else if (face_type != "plant" && face_type == "apex") {
+					} else if (face_type != "plant" && face_type == "apex") { //should never reach this
 						std::cout << "apex loc: (" << x << "," << y << ")" << std::endl;
 						std::cout << "(x1,x2): " << x1 << " " << x2 << " (y1,y2): " << y1 << " " << y2 << std::endl;
 						std::cout << "random coords (x, y): " << px << "," << py << std::endl; 
@@ -404,6 +414,14 @@ void GenAlgGame::ProgressTime() {
 
 
 				} else if (m==1) {
+					px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+					py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+					string face_type = (*world)[px][py].type;
+
+					if (face_type == "plant") {
+						(*world)[px][py] = Entity("plant");
+						apex_pop[current_pop_index].fitness += 1.0f;
+					}
 
 				} else if (m==2) {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()+1);
