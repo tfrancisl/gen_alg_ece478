@@ -308,58 +308,41 @@ void GenAlgGame::ProgressTime() {
 			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
 				int x1,y1,x2,y2,px,py;
 				int eater_count = 0;
-				int plant_count = 0;
-				bitset<3> etrs;
-				bitset<3> plts;
+				bitset<4> etrs;
 
 				current_pop_index = (*world)[x][y].pop_index;
 				(*world)[x][y].last_action = time_step;
 
 				face_dir = (*world)[x][y].facing.to_ulong();
-				//then create x and y bounds of the 2x3/3x2 box based on facing dir.
-				if (face_dir == 0) {	//up
-					x1 = x-1;
-					x2 = x+1;
-					y1 = y-2;
-					y2 = y-1;
-				} else if (face_dir == 1) {		//right
-					x1 = x+1;
-					x2 = x+2;
-					y1 = y-1;
-					y2 = y+1;
-				} else if (face_dir == 2) {		//down
-					x1 = x-1;
-					x2 = x+1;
-					y1 = y+1;
-					y2 = y+2;
-				} else if (face_dir == 3){		//left
+				
+				if (face_dir == 0 || face_dir == 2) {	//up
 					x1 = x-2;
-					x2 = x-1;
-					y1 = y-1;
-					y2 = y+1;
-				}
+					x2 = x+2;
+					y1 = y-2;
+					y2 = y;
+				} else if (face_dir == 1 || face_dir == 3) {		// down
+					x1 = x-2;
+					x2 = x+2;
+					y1 = y;
+					y2 = y+2;
+				} 
 
 				//fill in traits section of rule_key
 				for (int ax=x1; ax<x2; ax++) {
 					for (int ay=y1; ay<y2; ay++) {
-						if ((*world)[ax][ay].type == "eater" ) {
+						if ((*world)[ax][ay].type == "eater" && (ay!=y && ax!=x)) {
 							eater_count++;
-						} else if ((*world)[ax][ay].type == "plant") {
-							plant_count++;
 						}
 					}
 				}
 
-				etrs = bitset<3>(eater_count);
-				plts = bitset<3>(plant_count);
+				etrs = bitset<4>(eater_count);
 
 				for (int i=0; i<APEX_TRAITS; i++) {
 					if (i<2) {
 						apex_rule_key[i] = (*world)[x][y].facing[i];
-					} else if (i>2 && i<(APEX_TRAITS-3)) {
-						apex_rule_key[i] = etrs[i-2];
 					} else {
-						apex_rule_key[i] = plts[i-(APEX_TRAITS-3)];
+						apex_rule_key[i] = etrs[i-2];
 					}
 				}
 				
@@ -387,8 +370,10 @@ void GenAlgGame::ProgressTime() {
 				//10 = rotate +1,  
 				//11 = rotate -1, -> probably do something else
 				if (m==0) {
-					px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
-					py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+					do {
+						px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+						py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+					} while (py==y && px==x);
 
 					string face_type = (*world)[px][py].type;
 
@@ -413,14 +398,16 @@ void GenAlgGame::ProgressTime() {
 					}
 
 
-				} else if (m==1) {
-					px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
-					py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+				} else if (m==1 && gen != 1) {
+					do {
+						px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+						py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+					} while (py==y && px==x);
 					string face_type = (*world)[px][py].type;
 
 					if (face_type == "plant") {
 						(*world)[px][py] = Entity("plant");
-						apex_pop[current_pop_index].fitness += 1.0f;
+						apex_pop[current_pop_index].fitness += 0.75f;
 					}
 
 				} else if (m==2) {

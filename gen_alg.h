@@ -9,8 +9,8 @@
 #define EATER_GENE_LENGTH               (2+STATE_SIZE)  //plus 2 for action
 #define CHROMO_LENGTH				    (EATER_GENE_COUNT)*(EATER_GENE_LENGTH)
 
-//3 bits for total plant count in facing grid, 3 bits for total eater count in facing grid, 2 bits for actions
-#define APEX_TRAITS                     8
+//4 bits for total eater count in facing grid, 2 bits for action
+#define APEX_TRAITS                     6
 #define APEX_GENE_COUNT                 1<<(APEX_TRAITS+STATE_SIZE)
 #define APEX_GENE_LENGTH               	(2+STATE_SIZE)  //plus 2 for action
 #define APEX_CHROMO_LENGTH				(APEX_GENE_COUNT)*(APEX_GENE_LENGTH)
@@ -27,7 +27,7 @@
 
 #define WORLD_SIZE 					40              // should be 4 more than a mutiple of (APEX_POP_SIZE/2)
 #define DAYS_PER_GENERATION 		250
-#define GENERATIONS					2500
+#define GENERATIONS					1000
 
 #define MAKE_CSV 1
 
