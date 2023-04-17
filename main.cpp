@@ -8,10 +8,6 @@ using std::vector;
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
 int main(void) {
-
-	//set seed
-	//srand(2001);
-	
 	//time based seed (randomish)
 	srand((int)time(NULL));
 

@@ -18,7 +18,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 	int ax,ay;
 	//int current_apex = 0;
 	int current_row = 0;
-	int apex_per_row = APEX_POP_SIZE/2;
+	int apex_per_row = APEX_POP_SIZE/4;
 
 	this->world = new array<array<Entity, WORLD_SIZE>, WORLD_SIZE>;
 	//clear out the world
@@ -59,20 +59,13 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
 		tmp_ent.pop_index = i;
 		
-		if (current_row == 0) {
-			ay = (WORLD_SIZE-1)/4;
-		} else {
-			ay = (3*(WORLD_SIZE-1)/4);
-		}
+		// Place the apex's evenly in 4 rows
+		ay = ((2*current_row+1)*(WORLD_SIZE-1))/5;
 
-		//should do something more thorough for this
 		ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + (WORLD_SIZE/10);
 
 		(*world)[ax][ay] = tmp_ent;
 
-		//std::cout << i << ": " << "apex coords (" << ax << "," << ay << std::endl;
-
-        //GetRandomCoord(tmp_ent);
 
 	}
 
@@ -95,7 +88,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 		eater_pop.at(i) = tmp_chrm;
 
 		tmp_ent.pop_index = i;
-        GetRandomCoord(tmp_ent);
+        GetRandomCoord(tmp_ent, WORLD_SIZE/10);
 		
 	}
 
@@ -119,7 +112,7 @@ void GenAlgGame::GetRandomCoord(Entity ent) {
 void GenAlgGame::GetRandomCoord(Entity ent, int r) {
     int x,y;
 
-    do {	//clamp to 1 and WORLD_SIZE-2
+    do {	//clamp to r and WORLD_SIZE-r
         x = r + RANDOM_NUM_RANGE(WORLD_SIZE-r);
         y = r + RANDOM_NUM_RANGE(WORLD_SIZE-r);
     } while((*world)[x][y].type != "none"); //keep getting a random coordinate pair if an entity exists at the present location
@@ -192,8 +185,8 @@ void GenAlgGame::Generation() {
 		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
 		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
 
-        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 5.0f, CHROMO_LENGTH); 
-        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 5.0f, CHROMO_LENGTH); 
+        new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 2.5f, CHROMO_LENGTH); 
+        new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 2.5f, CHROMO_LENGTH); 
 
         //set up the new entity
         child1 = Entity("apex");
@@ -211,18 +204,10 @@ void GenAlgGame::Generation() {
         apex_pop.at(2*i) = new_chrm3;
         apex_pop.at(2*i+1) = new_chrm4;
 
-		//ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + (WORLD_SIZE/10);
-		//(*world)[ax][(WORLD_SIZE-1)/4] = child1;
-		//(*world)[ax][(3*(WORLD_SIZE-1))/4] = child2;
-
 		ax = ((i)%(apex_per_row))*((WORLD_SIZE-1)/(apex_per_row)) + 5;
 		(*world)[ax][((2*current_row+1)*(WORLD_SIZE-1))/5] = child1;
 		(*world)[ax][((2*current_row+2)*(WORLD_SIZE-1))/5] = child2;
 
-
-		//place the two new eaters into the empty world
-		//GetRandomCoord(child1);
-		//GetRandomCoord(child2);
 		if((i%apex_per_row)==0) {
 			current_row = ++current_row % 2;
 		}
@@ -251,8 +236,8 @@ void GenAlgGame::Generation() {
 		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1);
 		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2);
 
-        new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 5.0f, CHROMO_LENGTH); 
-        new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 5.0f, CHROMO_LENGTH); 
+        new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 2.5f, CHROMO_LENGTH); 
+        new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 2.5f, CHROMO_LENGTH); 
 
         //set up the new entity
         child1 = Entity("eater");
@@ -300,9 +285,6 @@ void GenAlgGame::ProgressTime() {
 	string facing_type,behind_type;
 	unsigned long face_dir;
 
-
-	//std::cout << "day " << time_step << ": " << std::endl;
-
 	for (x=0; x<WORLD_SIZE; x++) {
 		for (y=0; y<WORLD_SIZE; y++) {
 			if ((*world)[x][y].type == "apex" && (*world)[x][y].last_action != time_step) {
@@ -310,6 +292,7 @@ void GenAlgGame::ProgressTime() {
 				int eater_count = 0;
 				bitset<4> etrs;
 
+				// Grab the current apex's population index, increment its action
 				current_pop_index = (*world)[x][y].pop_index;
 				(*world)[x][y].last_action = time_step;
 
@@ -338,6 +321,7 @@ void GenAlgGame::ProgressTime() {
 
 				etrs = bitset<4>(eater_count);
 
+				// Generate rules index from facing dir and eater count
 				for (int i=0; i<APEX_TRAITS; i++) {
 					if (i<2) {
 						apex_rule_key[i] = (*world)[x][y].facing[i];
@@ -349,9 +333,10 @@ void GenAlgGame::ProgressTime() {
 				for (int i=APEX_TRAITS; i<(APEX_TRAITS+STATE_SIZE); i++) { // copy current state into key
 					apex_rule_key[i] = (*world)[x][y].state[i-APEX_TRAITS];
 				}
-				//std::cout << "apex rule key " << apex_rule_key.to_string() << std::endl;
+				
 				apex_rule = apex_pop[current_pop_index].rules[apex_rule_key.to_ulong()];
 
+				// Get action and change state from rule
 				for(int i=0; i<APEX_GENE_LENGTH; i++) {
 					if (i<2) {
 						action[i] = apex_rule[i];
@@ -430,7 +415,6 @@ void GenAlgGame::ProgressTime() {
 		 	} else if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action < time_step) {
 				
 				current_pop_index = (*world)[x][y].pop_index;
-				//std::cout << "pop index: " << current_pop_index << std::endl;
 				(*world)[x][y].last_action = time_step;	//only one action allowed per day so keep these together
 
 				face_dir = (*world)[x][y].facing.to_ulong();
@@ -479,6 +463,7 @@ void GenAlgGame::ProgressTime() {
 						view[2] = 1;
 						view[3] = 1;
 					}
+					//Issue: what if it's an apex?
  
 				}
 
@@ -504,9 +489,7 @@ void GenAlgGame::ProgressTime() {
 					}
 				}
 
-				//std::cout << "eater_rule key: " << eater_rule_key.to_ulong() << std::endl;
 				eater_rule = eater_pop[current_pop_index].rules[eater_rule_key.to_ulong()];
-				//std::cout << "eater_rule: " << eater_rule << std::endl;
 
 				for(int i=0; i<EATER_GENE_LENGTH; i++) {
 					if (i<2) {
@@ -517,7 +500,6 @@ void GenAlgGame::ProgressTime() {
 				}
 
 				m = action.to_ulong();
-				//std::cout << m << std::endl;
 				//00 = forward, 01 = backward, 10 = +1 to facing, 11 = -1 to facing
 
 				if (m==2) {
@@ -533,7 +515,6 @@ void GenAlgGame::ProgressTime() {
 
 						if(facing_type == "plant") {
 							eater_pop[current_pop_index].fitness += 1.0;
-							//GetRandomCoord(Entity("plant"));
 							RespawnPlantNearby(xf,yf);
 						}
 
@@ -543,7 +524,6 @@ void GenAlgGame::ProgressTime() {
 
 						if(behind_type == "plant") {
 							eater_pop[current_pop_index].fitness += 1.0;
-							//GetRandomCoord(Entity("plant"));
 							RespawnPlantNearby(xb,yb);
 						}
 					}
