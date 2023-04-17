@@ -3,7 +3,7 @@
 
 #define STATE_SIZE                      4
 
-//one bit for whether an apex is near, 2 bits for what is directly in front of the eater, 2 bits for which action to take 
+//one bit for apex warning signal, 2 bits for what is directly in front of the eater, 2 bits for which action to take 
 #define EATER_TRAITS                    5         
 #define EATER_GENE_COUNT                1<<(EATER_TRAITS+STATE_SIZE)
 #define EATER_GENE_LENGTH               (2+STATE_SIZE)  //plus 2 for action
@@ -27,7 +27,7 @@
 
 #define WORLD_SIZE 					40              // should be 4 more than a mutiple of (APEX_POP_SIZE/2)
 #define DAYS_PER_GENERATION 		250
-#define GENERATIONS					1000
+#define GENERATIONS					2000
 
 #define MAKE_CSV 1
 

@@ -361,65 +361,73 @@ void GenAlgGame::ProgressTime() {
 				}
 
 				m = action.to_ulong();
-				//00 = choose a random grid square.
+				//00 = choose a random grid square. repeat x2
 					//if theres a plant, do nothing. 
-					//if theres nothing, plant a plant and lose a fitness. 
+					//if theres nothing, plant a plant and lose fitness. 
 					//if theres an eater, take from its fitness (fitness can't go below 0.5)
  
-				//01 = eat the first plant you find in your six squares, gain a fitness, 
+				//01 = eat the first plant you find in your squares, gain a fitness. repeat
 				//10 = rotate +1,  
-				//11 = rotate -1, -> probably do something else
+				//11 = paralyze a nearby eater for 2 days (if theyre at least minimally fit)
 				if (m==0) {
-					do {
-						px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
-						py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
-					} while (py==y && px==x);
+					for (int p=0; p<3; p++) {
+						do {
+							px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+							py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+						} while (py==y && px==x);
 
-					string face_type = (*world)[px][py].type;
+						string face_type = (*world)[px][py].type;
 
-					if (face_type == "eater") {
-						if ( eater_pop[(*world)[px][py].pop_index].fitness >= 2.5 ) {
-							eater_pop[(*world)[px][py].pop_index].fitness -= 2.0f;
-							apex_pop[current_pop_index].fitness += 2.0f;
+						if (face_type == "eater") {
+							if ( eater_pop[(*world)[px][py].pop_index].fitness >= 1.5f ) {
+								eater_pop[(*world)[px][py].pop_index].fitness -= 1.0f;
+								apex_pop[current_pop_index].fitness += 2.0f;
+							}
+							//warn eater that they were attacked
+							(*world)[px][py].last_alert = time_step;
+
+						} else if (face_type == "none") {
+							if ( apex_pop[current_pop_index].fitness >= 1.5) {
+								(*world)[px][py] = Entity("plant");
+								apex_pop[current_pop_index].fitness -= 1.0f;
+							}
+						} else if (face_type != "plant" && face_type == "apex") { //should never reach this
+							std::cout << "Something is wrong in apex behavior :) face type: " << face_type << std::endl;
 						}
-						//send trigger to eater goes here
-
-					} else if (face_type == "none") {
-						if ( apex_pop[current_pop_index].fitness >= 1.5) {
-							(*world)[px][py] = Entity("plant");
-							apex_pop[current_pop_index].fitness -= 1.0f;
-						}
-					} else if (face_type != "plant" && face_type == "apex") { //should never reach this
-						std::cout << "apex loc: (" << x << "," << y << ")" << std::endl;
-						std::cout << "(x1,x2): " << x1 << " " << x2 << " (y1,y2): " << y1 << " " << y2 << std::endl;
-						std::cout << "random coords (x, y): " << px << "," << py << std::endl; 
-
-						//std::cout << "Something is wrong in apex behavior :) face type: " << face_type << std::endl;
 					}
 
-
 				} else if (m==1 && gen != 1) {
-					do {
-						px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
-						py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
-					} while (py==y && px==x);
-					string face_type = (*world)[px][py].type;
+					for (int p=0; p<2; p++) {
+						do {
+							px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+							py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+						} while (py==y && px==x);
+						string face_type = (*world)[px][py].type;
 
-					if (face_type == "plant") {
-						(*world)[px][py] = Entity("plant");
-						apex_pop[current_pop_index].fitness += 0.75f;
+						if (face_type == "plant") {
+							(*world)[px][py] = Entity();
+							apex_pop[current_pop_index].fitness += 0.75f;
+						}
 					}
 
 				} else if (m==2) {
 					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()+1);
 				} else if (m==3) {
-					(*world)[x][y].facing = bitset<2>((*world)[x][y].facing.to_ulong()-1);
+					do {
+						px = RANDOM_NUM_RANGE(x2-x1) + x1 + 1;		//random num between x1, x2 inclusive
+						py = RANDOM_NUM_RANGE(y2-y1) + y1 + 1;
+					} while (py==y && px==x);
+					string face_type = (*world)[px][py].type;
+
+					if (face_type == "eater" && eater_pop[(*world)[px][py].pop_index].fitness >= 1.5f) {
+						//eater_pop[(*world)[px][py].pop_index]
+						(*world)[px][py].last_action += 2;	//paralyze the eater for 2 days
+						//warn eater that they were attacked
+						(*world)[px][py].last_alert = time_step;
+					}
 				}
-				
 
-
-
-		 	} else if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action != time_step) {
+		 	} else if( (*world)[x][y].type == "eater" && (*world)[x][y].last_action < time_step) {
 				
 				current_pop_index = (*world)[x][y].pop_index;
 				//std::cout << "pop index: " << current_pop_index << std::endl;
@@ -481,9 +489,10 @@ void GenAlgGame::ProgressTime() {
 				}
 
 				for (int i=0; i<(EATER_TRAITS+STATE_SIZE); i++) {
-					if (i==0) { //lowest bit = is there an apex near me
-					//	might switch this to "did an apex steal from me recently"... triggered by the apex stealing
-						if (facing_type == "apex" || behind_type == "apex"){
+					if (i==0) { //lowest bit = did an apex warn me recently?
+						if ((*world)[x][y].last_alert == time_step || 
+							(*world)[x][y].last_alert == time_step-1 || 
+							(*world)[x][y].last_alert == time_step-2) {
 							eater_rule_key[i] = 1;
 						} else {
 							eater_rule_key[i] = 0;

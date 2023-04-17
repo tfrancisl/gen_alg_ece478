@@ -11,6 +11,7 @@ public:
     Entity(string t);
 
     int last_action;  //what time step was their last action taken on?
+    int last_alert;   //For eaters, the last time step an apex attacked them
     int pop_index;    //store their index into the array of chromosomes for their species
     string type;
     int spec;
