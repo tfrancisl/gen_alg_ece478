@@ -7,15 +7,20 @@ using std::vector;
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
-int main(void) {
-	//time based seed (randomish)
-	srand((int)time(NULL));
+int main(int argc, char *argv[]) {
+	if (argc < 2) { 
+		//time based seed (randomish)
+		srand((int)time(NULL));
+	} else if (argc >= 2) {
+		//set seed based on argv[1]
+		srand(std::atoi(argv[1]));
+	}
 
     GenAlgGame *game1 = new GenAlgGame(EATER_POP_SIZE, PLANT_POP_SIZE);
 
 
     #if MAKE_CSV
-	std::cout << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex" << std::endl;
+	std::cout << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex,total_plants" << std::endl;
 	#endif
     
     for(int g=0; g<GENERATIONS; g++) {

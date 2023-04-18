@@ -130,6 +130,7 @@ void GenAlgGame::Generation() {
 	int current_pop_index;
 	int current_row = 0;
 	int apex_per_row = APEX_POP_SIZE/4;
+	int total_plants = 0;
 
     gen++;
 
@@ -155,15 +156,18 @@ void GenAlgGame::Generation() {
 		total_fitness_apex += i->fitness;
 	}
 
-    #if MAKE_CSV
-    std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(APEX_POP_SIZE) << std::endl;
-    #endif
-
-	 //clear out the world
+	//clear out the world
     for (int s=0; s<WORLD_SIZE; s++) {
+		for (auto itr = (*world)[s].begin(); itr != (*world)[s].end(); ++itr) {
+			if(itr->type == "plant") total_plants++;
+		}
+
         (*world)[s].fill(Entity());
     }
 
+    #if MAKE_CSV
+    std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(APEX_POP_SIZE) << "," << total_plants << std::endl;
+    #endif
 
 	for (int i=0; i<APEX_POP_SIZE/2; i++) {
         bitset<APEX_CHROMO_LENGTH> genes3,genes4;
@@ -374,6 +378,7 @@ void GenAlgGame::ProgressTime() {
 						} else if (face_type == "none") {
 							if ( apex_pop[current_pop_index].fitness >= 1.5) {
 								(*world)[px][py] = Entity("plant");
+								(*world)[px][py].spec = 10;
 								apex_pop[current_pop_index].fitness -= 1.0f;
 							}
 						} else if (face_type != "plant" && face_type == "apex") { //should never reach this
@@ -510,21 +515,24 @@ void GenAlgGame::ProgressTime() {
 					
 					//move the eater
 					if (m == 0) {
+						int face_spec = (*world)[xf][yf].spec;
 						(*world)[xf][yf] = (*world)[x][y]; 	
 						(*world)[x][y] = Entity();	
 
 						if(facing_type == "plant") {
 							eater_pop[current_pop_index].fitness += 1.0;
-							RespawnPlantNearby(xf,yf);
+
+							if (face_spec != 10) RespawnPlantNearby(xf,yf); //only do random respawn on the core pool of plants
 						}
 
 					} else if (behind_type != "wall" && behind_type != "eater" && behind_type != "apex") {	//unfortunately I have to manually check the grid behind them
+						int face_spec = (*world)[xf][yf].spec;
 						(*world)[xb][yb] = (*world)[x][y]; 
 						(*world)[x][y] = Entity();	
 
 						if(behind_type == "plant") {
-							eater_pop[current_pop_index].fitness += 1.0;
-							RespawnPlantNearby(xb,yb);
+							eater_pop[current_pop_index].fitness += 1.0;	//only do random respawn on the core pool of plants
+							if (face_spec != 10) RespawnPlantNearby(xb,yb);
 						}
 					}
 		

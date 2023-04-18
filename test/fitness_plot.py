@@ -7,54 +7,37 @@ import sys
 avg_n = 100
 
 if len(sys.argv) < 3:
-    print("error provide csv name and header row #")
+    print("error provide csv name and output basename")
 
 data_file = sys.argv[1]
-base_name = sys.argv[1].split(".")[0]
+base_name = sys.argv[2]
 print("working on {}".format(sys.argv[1]))
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
-data = pd.read_csv(data_file, header=int(sys.argv[2]))
+data = pd.read_csv(data_file, header=0)
 
-fig, ax = plt.subplots()
+def make_plot(xdata, ydata, title="", name_ext=".png"):
+    fig, ax = plt.subplots()
+    
+    
+    line1, = ax.plot(xdata, ydata)
+    line2, = ax.plot(xdata[avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(ydata, avg_n))
+    ax.legend([line1, line2],["All generations", f"n={avg_n} moving average"])
 
-ax.plot(data['generation'], data['avg_fitness'])
-ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['avg_fitness'], avg_n))
-plt.title("Average eater fitness over generations")
-ymax = max(data['avg_fitness'])
-xpos = data['avg_fitness'].idxmax()
-xmax = data['generation'][xpos]
-ax.scatter(xmax, ymax, c='r', marker='x')
-fig.savefig(base_name + "_avg_fitness.png")
-ax.clear()
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Fitness")
+    plt.title(title)
+    ymax = max(ydata)
+    xpos = ydata.idxmax()
+    xmax = xdata[xpos]
+    ax.scatter(xmax, ymax, c='r', marker='x')
+    fig.savefig(base_name + name_ext)
+    ax.clear()
 
-ax.plot(data['generation'], data['avg_fitness_apex'])
-ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['avg_fitness_apex'], avg_n))
-plt.title("Average apex fitness over generations")
-ymax = max(data['avg_fitness_apex'])
-xpos = data['avg_fitness_apex'].idxmax()
-xmax = data['generation'][xpos]
-ax.scatter(xmax, ymax, c='r', marker='x')
-fig.savefig(base_name + "_avg_fitness_apex.png")
-ax.clear()
 
-ax.plot(data['generation'], data['max_fitness'])
-ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['max_fitness'], avg_n))
-plt.title("Maximum eater fitness over generations")
-ymax = max(data['max_fitness'])
-xpos = data['max_fitness'].idxmax()
-xmax = data['generation'][xpos]
-ax.scatter(xmax, ymax, c='r', marker='x')
-fig.savefig(base_name + "_fitness.png")
-ax.clear()
-
-ax.plot(data['generation'], data['max_fitness_apex'])
-ax.plot(data['generation'][avg_n//2:(data.shape[0])-avg_n//2 +1], moving_average(data['max_fitness_apex'], avg_n))
-plt.title("Maximum apex fitness over generations")
-ymax = max(data['max_fitness_apex'])
-xpos = data['max_fitness_apex'].idxmax()
-xmax = data['generation'][xpos]
-ax.scatter(xmax, ymax, c='r', marker='x')
-fig.savefig(base_name + "_fitness_apex.png")
+make_plot(data['generation'], data['avg_fitness'], "Average eater fitness over generations", "_avg_fitness.png")
+make_plot(data['generation'], data['avg_fitness_apex'], "Average apex fitness over generations", "_apex_avg_fitness.png")
+make_plot(data['generation'], data['max_fitness'], "Max eater fitness over generations", "_max_fitness.png")
+make_plot(data['generation'], data['max_fitness_apex'], "Max eater fitness over generations", "_apex_max_fitness.png")
