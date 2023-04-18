@@ -2,39 +2,70 @@
 #include "gen_alg_game.h"
 #include <vector>
 #include "time.h"
+#include <chrono>
 using std::vector;
 
+#define NUM_TESTS 10
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
 int main(int argc, char *argv[]) {
-	if (argc < 2) { 
-		//time based seed (randomish)
-		srand((int)time(NULL));
-	} else if (argc >= 2) {
-		//set seed based on argv[1]
-		srand(std::atoi(argv[1]));
+
+	vector<int> eater_pop_sizes     = {50,    50,    50,    50,    50,    50,    50,    50,    20,    150};
+	vector<int> plant_pop_sizes     = {150,   150,   150,   150,   150,   150,   0,     350,   150,   150};
+	vector<int> apex_pop_sizes      = {16,    16,    16,    16,    4,     32,    16,    16,    16,    16};
+	vector<int> gens 				= {1000,  1000,  250,   2500,  1000,  1000,  1000,  1000,  1000,  1000};
+	vector<int> days	 			= {365,   365,   1200,  365,   365,   365,   365,   365,   365,   365};
+	vector<float> crossover_rates(NUM_TESTS, 0.75);
+	vector<float> mutation_rates    = {0.025, 0.025, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001};
+	
+	for (int i=0; i<NUM_TESTS; i++) {
+
+		if (argc < 2) { 
+			//time based seed (randomish)
+			srand((int)time(NULL));
+		} else if (argc >= 2) {
+			//set seed based on argv[1]
+			srand(std::atoi(argv[1]));
+		}
+
+		ofstream f;
+		string fn = "test" + std::to_string(i) + ".csv";
+
+		f.open(fn, std::ios::out);
+		f << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex,total_plants\n";
+		auto bef_game = std::chrono::high_resolution_clock::now();
+
+		GenAlgGame *game1 = new GenAlgGame(eater_pop_sizes[i], plant_pop_sizes[i], apex_pop_sizes[i]);
+		game1->SetGeneticParams(crossover_rates[i], mutation_rates[i], 0.001);
+		for(int g=0; g<gens[i]; g++) {
+			game1->Generation(days[i]);
+		}
+		auto after_game = std::chrono::high_resolution_clock::now();
+		std::cout << "Game " << i << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(after_game-bef_game).count() << "ms\n";
+
+		for (int g=0; g<gens[i]; g++) {
+			f << g << "," << game1->max_eater_fitness[g] << "," \
+						<< game1->avg_eater_fitness[g] << "," \
+						<< game1->max_apex_fitness[g]  << "," \
+						<< game1->avg_apex_fitness[g]  << ","  \
+						<< game1->plant_count[g] << "\n";
+		}
+		f.close();
+
+		delete game1;
 	}
 
-    GenAlgGame *game1 = new GenAlgGame(EATER_POP_SIZE, PLANT_POP_SIZE);
 
-
-    #if MAKE_CSV
-	std::cout << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex,total_plants" << std::endl;
-	#endif
-    
-    for(int g=0; g<GENERATIONS; g++) {
-        game1->Generation();
-    }
-
-	#if !MAKE_CSV
+	//turn this to file stream
+	/*#if !MAKE_CSV
     for (int d=0; d<DAYS_PER_GENERATION; d++) {
 		game1->ProgressTime();
 		
 		WorldToStrings(*(game1->world));
 		
 	}
-	#endif
+	#endif*/
 
 }
 

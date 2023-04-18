@@ -3,26 +3,40 @@
 
 #include <array>
 #include <vector>
+#include <iostream>
+#include <fstream>
 #include "chromosome.h"
 #include "entity.h"
 
 using std::vector;
+using std::ofstream;
 class GenAlgGame {
 
 public:
     GenAlgGame();
-    GenAlgGame(int eater_pop_size, int plant_pop_size);
+    GenAlgGame(int eater_pop_size, int plant_pop_size, int apex_pop_size);
 
-    int time_step,eater_pop_size,plant_pop_size,gen;
+    int time_step,eater_pop_size,plant_pop_size,apex_pop_size,gen;
+    float crossover_rate, mutation_rate, deletion_rate;
+    //ofstream csv_file;
+
+    vector<float> max_eater_fitness;
+    vector<float> max_apex_fitness;
+    vector<float> avg_eater_fitness;
+    vector<float> avg_apex_fitness;
+    vector<float> plant_count;
+
     array<array<Entity, WORLD_SIZE>, WORLD_SIZE> *world;
 
     vector< Chromosome<EATER_GENE_LENGTH, EATER_GENE_COUNT> > eater_pop;
     vector< Chromosome<APEX_GENE_LENGTH, APEX_GENE_COUNT> > apex_pop;
 
-    void ProgressTime();      //game logic more similar to the original plant and eater 
+    void SetGeneticParams(float crossover_rate, float mutation_rate, float deletion_rate);
 
-    void Generation();
-    //void ApexGeneration();
+    void ProgressTime();
+
+    void Generation(int days);
+
     void RespawnPlantNearby(int x1, int y1);
 
     void GetRandomCoord(Entity ent);

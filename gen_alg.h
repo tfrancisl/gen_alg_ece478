@@ -15,19 +15,9 @@
 #define APEX_GENE_LENGTH               	(2+STATE_SIZE)  //plus 2 for action
 #define APEX_CHROMO_LENGTH				(APEX_GENE_COUNT)*(APEX_GENE_LENGTH)
 
-
-#define CROSSOVER_RATE            	0.75
-#define MUTATION_RATE             	0.001
-#define DELETION_RATE               0.001
 #define MAX_DELETION_LENGTH         3*EATER_GENE_LENGTH
 
-#define EATER_POP_SIZE              50              //Must be even (roulette rules)
-#define PLANT_POP_SIZE              10
-#define APEX_POP_SIZE               16              //Must be even (roulette rules)
-
-#define WORLD_SIZE 					40              // should be 4 more than a mutiple of (APEX_POP_SIZE/2)
-#define DAYS_PER_GENERATION 		365
-#define GENERATIONS					2000
+#define WORLD_SIZE 					40          // Cannot be moved to a variable since it is used for templating
 
 #define MAKE_CSV 1
 

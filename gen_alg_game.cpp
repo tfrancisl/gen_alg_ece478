@@ -7,7 +7,7 @@ using std::pair;
 
 GenAlgGame::GenAlgGame() {}
 
-GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
+GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size, int apex_pop_size) {
 
     bitset<CHROMO_LENGTH> genes1;
 	bitset<APEX_CHROMO_LENGTH> genes2;
@@ -18,7 +18,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 	int ax,ay;
 	//int current_apex = 0;
 	int current_row = 0;
-	int apex_per_row = APEX_POP_SIZE/4;
+	int apex_per_row = (apex_pop_size)/4;
 
 	this->world = new array<array<Entity, WORLD_SIZE>, WORLD_SIZE>;
 	//clear out the world
@@ -28,16 +28,17 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size) {
 
     this->eater_pop_size = eater_pop_size;
     this->plant_pop_size = plant_pop_size;
+	this->apex_pop_size = apex_pop_size;
 
 	//make empty eater pop vector
 	eater_pop.assign(this->eater_pop_size, Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>());
-	apex_pop.assign(APEX_POP_SIZE, Chromosome<APEX_GENE_LENGTH, APEX_GENE_COUNT>());
+	apex_pop.assign(this->apex_pop_size, Chromosome<APEX_GENE_LENGTH, APEX_GENE_COUNT>());
 
     time_step = 0;
     gen = 0;
 
 	//apex must go first as they go in very specific locations
-	for (int i=0; i<APEX_POP_SIZE; i++) {
+	for (int i=0; i<this->apex_pop_size; i++) {
 		genes2.reset();
 
 		for (int j=0; j<APEX_CHROMO_LENGTH; j++) {
@@ -120,7 +121,13 @@ void GenAlgGame::GetRandomCoord(Entity ent, int r) {
     (*world)[x][y] = ent;
 }
 
-void GenAlgGame::Generation() {
+void GenAlgGame::SetGeneticParams(float crossover_rate, float mutation_rate, float deletion_rate) { 
+	this->crossover_rate = crossover_rate;
+	this->mutation_rate = mutation_rate;
+	this->deletion_rate = deletion_rate;
+}
+
+void GenAlgGame::Generation(int days) {
 
     vector<Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>> tmp_eater_population;
 	vector<Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>> tmp_apex_population;
@@ -129,16 +136,16 @@ void GenAlgGame::Generation() {
     int x,y,ax,ay;
 	int current_pop_index;
 	int current_row = 0;
-	int apex_per_row = APEX_POP_SIZE/4;
+	int apex_per_row = this->apex_pop_size/4;
 	int total_plants = 0;
 
     gen++;
 
 	//make empty tmp eater population vector
     tmp_eater_population.assign(this->eater_pop_size, Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>());
-	tmp_apex_population.assign(APEX_POP_SIZE, Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>());
+	tmp_apex_population.assign(this->apex_pop_size, Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>());
 
-    for (int d=0; d<DAYS_PER_GENERATION; d++) {
+    for (int d=0; d<(days); d++) {
        	ProgressTime();
     }
 
@@ -165,11 +172,20 @@ void GenAlgGame::Generation() {
         (*world)[s].fill(Entity());
     }
 
-    #if MAKE_CSV
-    std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(EATER_POP_SIZE) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(APEX_POP_SIZE) << "," << total_plants << std::endl;
-    #endif
+    //#if MAKE_CSV
+    //std::cout << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(this->eater_pop_size) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(this->apex_pop_size) << "," << total_plants << std::endl;
+    //#endif
 
-	for (int i=0; i<APEX_POP_SIZE/2; i++) {
+	max_eater_fitness.push_back(max_fitness_eaters);
+	max_apex_fitness.push_back(max_fitness_apex);
+	avg_eater_fitness.push_back(total_fitness_eaters/(float)(this->eater_pop_size));
+	avg_apex_fitness.push_back(total_fitness_apex/(float)(this->apex_pop_size));
+	plant_count.push_back(total_plants);
+
+	//this->csv_file << gen << "," << max_fitness_eaters << "," << total_fitness_eaters/(float)(this->eater_pop_size) << "," << max_fitness_apex << "," << total_fitness_apex/(float)(this->apex_pop_size) << "," << total_plants << "\n";
+
+
+	for (int i=0; i<(this->apex_pop_size)/2; i++) {
         bitset<APEX_CHROMO_LENGTH> genes3,genes4;
         Entity child1, child2;
 	    Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT> new_chrm3,new_chrm4;
@@ -179,15 +195,15 @@ void GenAlgGame::Generation() {
         genes4 = Roulette<APEX_GENE_LENGTH, APEX_GENE_COUNT>(total_fitness_apex, apex_pop);
 
         //crossover
-        Crossover<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, genes4);
+        Crossover<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, genes4, this->crossover_rate);
         
         //mutate
-        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
-        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
+        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, this->mutation_rate);
+        Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4, this->mutation_rate);
 
 		//random deletion
-		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3);
-		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4);
+		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, this->deletion_rate);
+		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4, this->deletion_rate);
 
         new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 2.5f, CHROMO_LENGTH); 
         new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 2.5f, CHROMO_LENGTH); 
@@ -219,7 +235,7 @@ void GenAlgGame::Generation() {
 	apex_pop.clear();
 	apex_pop = tmp_apex_population;
 
-    for (int i=0; i<EATER_POP_SIZE/2; i++) {
+    for (int i=0; i<(this->eater_pop_size)/2; i++) {
         bitset<CHROMO_LENGTH> genes1,genes2;
         Entity child1, child2;
 	    Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT> new_chrm1,new_chrm2;
@@ -230,15 +246,15 @@ void GenAlgGame::Generation() {
         genes2 = Roulette<EATER_GENE_LENGTH, EATER_GENE_COUNT>(total_fitness_eaters, eater_pop);
 
         //crossover
-        Crossover<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1, genes2);
+        Crossover<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1, genes2, this->crossover_rate);
         
         //mutate
-        Mutate<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1);
-        Mutate<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2);
+        Mutate<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1, this->mutation_rate);
+        Mutate<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2, this->mutation_rate);
 
 		//random deletion
-		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1);
-		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2);
+		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1, this->deletion_rate);
+		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2, this->deletion_rate);
 
         new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 2.5f, CHROMO_LENGTH); 
         new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 2.5f, CHROMO_LENGTH); 
@@ -271,7 +287,7 @@ void GenAlgGame::Generation() {
 	eater_pop = tmp_eater_population;
 
     //create the plants and place them in the world
-    for (int i=0; i<PLANT_POP_SIZE; i++) {
+    for (int i=0; i<(this->plant_pop_size); i++) {
         GetRandomCoord(Entity("plant"), WORLD_SIZE/5);
     }
 
