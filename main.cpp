@@ -5,26 +5,27 @@
 #include <chrono>
 using std::vector;
 
-#define NUM_TESTS 10
+#define NUM_TESTS 20
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {			//	--------------------------------etrs-------------------------------gens/days----------------------------etrs--------------------------
+	// 										    pl1		pl2		pl3		mut	 c	---								  *++++++*								 ---	
+	array<int, NUM_TESTS> eater_pop_sizes     = {10,    10,    10,    10,    10,    50,    50,    50,    50,    50,       10,    10,    10,    10,    10,    50,    50,    50,    50,    50};
+	array<int, NUM_TESTS> plant_pop_sizes     = {0,     50,    250,   150,   150,   0,     50,    250,   150,   150,      0,     50,    250,   150,   150,   0,     50,    250,   150,   150};
+	array<int, NUM_TESTS> apex_pop_sizes      = {16,    16,    16,    16,    16,    16,    16,    16,    16,    16,       16,    16,    16,    16,    16,    16,    16,    16,    16,    16};
+	array<int, NUM_TESTS> gens 				  = {2000,  2000,  2000,  2000,  2000,  2000,  2000,  2000,  2000,  2000,     1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000};
+	array<int, NUM_TESTS> days	 			  = {100,   100,   100,   100,   100,   100,   100,   100,   100,   100,      200,   200,   200,   200,   200,   200,   200,   200,   200,   200};
+	array<float, NUM_TESTS> crossover_rates   = {0.75,  0.75,  0.75,  0.75,  0.25,  0.75,  0.75,  0.75,  0.75,  0.25,     0.75,  0.75,  0.75,  0.75,  0.25,  0.75,  0.75,  0.75,  0.75,  0.25};
+	array<float, NUM_TESTS> mutation_rates    = {0.001, 0.001, 0.001, 0.01,  0.001, 0.001, 0.001, 0.001, 0.01,  0.001,    0.001, 0.001, 0.001, 0.01,  0.001, 0.001, 0.001, 0.001, 0.01,  0.001};
+	//gate string type check behind bool flag isCreature check in genalg
 
-	vector<int> eater_pop_sizes     = {50,    50,    50,    50,    50,    50,    50,    50,    20,    150};
-	vector<int> plant_pop_sizes     = {150,   150,   150,   150,   150,   150,   0,     350,   150,   150};
-	vector<int> apex_pop_sizes      = {16,    16,    16,    16,    4,     32,    16,    16,    16,    16};
-	vector<int> gens 				= {1000,  1000,  250,   2500,  1000,  1000,  1000,  1000,  1000,  1000};
-	vector<int> days	 			= {365,   365,   1200,  365,   365,   365,   365,   365,   365,   365};
-	vector<float> crossover_rates(NUM_TESTS, 0.75);
-	vector<float> mutation_rates    = {0.025, 0.025, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001};
-	
-	for (int i=0; i<NUM_TESTS; i++) {
+	for (int i=0; i<1; i++) {
 
 		if (argc < 2) { 
 			//time based seed (randomish)
 			srand((int)time(NULL));
-		} else if (argc >= 2) {
+		} else {
 			//set seed based on argv[1]
 			srand(std::atoi(argv[1]));
 		}
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
 		auto bef_game = std::chrono::high_resolution_clock::now();
 
 		GenAlgGame *game1 = new GenAlgGame(eater_pop_sizes[i], plant_pop_sizes[i], apex_pop_sizes[i]);
-		game1->SetGeneticParams(crossover_rates[i], mutation_rates[i], 0.001);
+		game1->SetGeneticParams(crossover_rates[i], mutation_rates[i], 0.000);
 		for(int g=0; g<gens[i]; g++) {
 			game1->Generation(days[i]);
 		}

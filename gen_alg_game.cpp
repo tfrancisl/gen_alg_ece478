@@ -202,8 +202,8 @@ void GenAlgGame::Generation(int days) {
         Mutate<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4, this->mutation_rate);
 
 		//random deletion
-		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, this->deletion_rate);
-		Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4, this->deletion_rate);
+		//Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes3, this->deletion_rate);
+		//Deletion<APEX_GENE_LENGTH, APEX_GENE_COUNT>(genes4, this->deletion_rate);
 
         new_chrm3 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes3, 2.5f, CHROMO_LENGTH); 
         new_chrm4 = Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT>(genes4, 2.5f, CHROMO_LENGTH); 
@@ -253,8 +253,8 @@ void GenAlgGame::Generation(int days) {
         Mutate<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2, this->mutation_rate);
 
 		//random deletion
-		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1, this->deletion_rate);
-		Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2, this->deletion_rate);
+		//Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes1, this->deletion_rate);
+		//Deletion<EATER_GENE_LENGTH, EATER_GENE_COUNT>(genes2, this->deletion_rate);
 
         new_chrm1 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes1, 2.5f, CHROMO_LENGTH); 
         new_chrm2 = Chromosome<EATER_GENE_LENGTH,EATER_GENE_COUNT>(genes2, 2.5f, CHROMO_LENGTH); 
