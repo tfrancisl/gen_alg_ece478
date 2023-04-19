@@ -8,8 +8,9 @@ class Entity {
 
 public:
     Entity();
-    Entity(string t);
+    Entity(string t, bool cre);
 
+    bool is_creature;
     int last_action;  //what time step was their last action taken on?
     int last_alert;   //For eaters, the last time step an apex attacked them
     int pop_index;    //store their index into the array of chromosomes for their species

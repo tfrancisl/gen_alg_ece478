@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {			//	--------------------------------etrs----
 	array<float, NUM_TESTS> mutation_rates    = {0.001, 0.001, 0.001, 0.01,  0.001, 0.001, 0.001, 0.001, 0.01,  0.001,    0.001, 0.001, 0.001, 0.01,  0.001, 0.001, 0.001, 0.001, 0.01,  0.001};
 	//gate string type check behind bool flag isCreature check in genalg
 
-	for (int i=0; i<NUM_TESTS; i++) {
+	for (int i=9; i<10; i++) {
 
 		if (argc < 2) { 
 			//time based seed (randomish)
