@@ -55,7 +55,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size, int apex_pop_size
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
 		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
 
-		tmp_chrm2.BitsToRules();
+		//tmp_chrm2.BitsToRules();
 		apex_pop.at(i) = tmp_chrm2;
 
 		tmp_ent.pop_index = i;
@@ -85,7 +85,7 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size, int apex_pop_size
 		tmp_ent.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)));	//need a random starting state
 		tmp_ent.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
 
-		tmp_chrm.BitsToRules();
+		//tmp_chrm.BitsToRules();
 		eater_pop.at(i) = tmp_chrm;
 
 		tmp_ent.pop_index = i;
@@ -212,11 +212,11 @@ void GenAlgGame::Generation(int days) {
         child1 = Entity("apex");
         child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
 		child1.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
-        new_chrm3.BitsToRules();
+        //new_chrm3.BitsToRules();
         child2 = Entity("apex");
         child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
 		child2.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
-        new_chrm4.BitsToRules();
+        //new_chrm4.BitsToRules();
         
 		child1.pop_index = 2*i;
 		child2.pop_index = 2*i+1;
@@ -263,11 +263,11 @@ void GenAlgGame::Generation(int days) {
         child1 = Entity("eater");
         child1.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
 		child1.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
-        new_chrm1.BitsToRules();
+        //new_chrm1.BitsToRules();
         child2 = Entity("eater");
         child2.state = bitset<STATE_SIZE>( RANDOM_NUM_RANGE(pow(2,STATE_SIZE)) );
 		child2.facing = bitset<2>( RANDOM_NUM_RANGE(4) );
-        new_chrm2.BitsToRules();
+        //new_chrm2.BitsToRules();
 
         if (i==0) {
             child1.spec = 1;
@@ -354,7 +354,9 @@ void GenAlgGame::ProgressTime() {
 					apex_rule_key[i] = (*world)[x][y].state[i-APEX_TRAITS];
 				}
 				
-				apex_rule = apex_pop[current_pop_index].rules[apex_rule_key.to_ulong()];
+				for (int i=0; i<APEX_GENE_LENGTH; i++) {
+					apex_rule[i] = apex_pop[current_pop_index].bits[APEX_GENE_LENGTH*(apex_rule_key.to_ulong()) + i];
+				}
 
 				// Get action and change state from rule
 				for(int i=0; i<APEX_GENE_LENGTH; i++) {
@@ -510,7 +512,9 @@ void GenAlgGame::ProgressTime() {
 					}
 				}
 
-				eater_rule = eater_pop[current_pop_index].rules[eater_rule_key.to_ulong()];
+				for (int i=0; i<EATER_GENE_LENGTH; i++) {
+					eater_rule[i] = eater_pop[current_pop_index].bits[EATER_GENE_LENGTH*(eater_rule_key.to_ulong()) + i];
+				}
 
 				for(int i=0; i<EATER_GENE_LENGTH; i++) {
 					if (i<2) {
