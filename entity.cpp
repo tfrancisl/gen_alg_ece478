@@ -3,6 +3,7 @@ using std::string;
 
 Entity::Entity() {
     this->type = "none";
+    this->is_creature = false;
 }
 
 Entity::Entity(string t, bool cre) {

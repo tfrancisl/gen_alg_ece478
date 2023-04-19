@@ -1,6 +1,7 @@
 #include "gen_alg_game.h"
 #include "bitset_genetics.h"
 #include <vector>
+#include <chrono>
 
 using std::vector;
 using std::pair;
@@ -16,7 +17,6 @@ GenAlgGame::GenAlgGame(int eater_pop_size, int plant_pop_size, int apex_pop_size
 	Chromosome<APEX_GENE_LENGTH,APEX_GENE_COUNT> tmp_chrm2;
     int x,y;
 	int ax,ay;
-	//int current_apex = 0;
 	int current_row = 0;
 	int apex_per_row = (apex_pop_size)/4;
 

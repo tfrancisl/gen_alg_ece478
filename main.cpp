@@ -5,22 +5,30 @@
 #include <chrono>
 using std::vector;
 
-#define NUM_TESTS 20
+#define NUM_TESTS 4
 
 vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
-int main(int argc, char *argv[]) {			//	--------------------------------etrs-------------------------------gens/days----------------------------etrs--------------------------
-	// 										    pl1		pl2		pl3		mut	 c	---								  *++++++*								 ---	
-	array<int, NUM_TESTS> eater_pop_sizes     = {10,    10,    10,    10,    10,    50,    50,    50,    50,    50,       10,    10,    10,    10,    10,    50,    50,    50,    50,    50};
+/*array<int, NUM_TESTS> eater_pop_sizes     = {50,    25,    25,    25,    25,    50,    50,    50,    50,    50,       25,    25,    25,    25,    25,    50,    50,    50,    50,    50};
 	array<int, NUM_TESTS> plant_pop_sizes     = {0,     50,    250,   150,   150,   0,     50,    250,   150,   150,      0,     50,    250,   150,   150,   0,     50,    250,   150,   150};
 	array<int, NUM_TESTS> apex_pop_sizes      = {16,    16,    16,    16,    16,    16,    16,    16,    16,    16,       16,    16,    16,    16,    16,    16,    16,    16,    16,    16};
-	array<int, NUM_TESTS> gens 				  = {2000,  2000,  2000,  2000,  2000,  2000,  2000,  2000,  2000,  2000,     1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000};
-	array<int, NUM_TESTS> days	 			  = {100,   100,   100,   100,   100,   100,   100,   100,   100,   100,      200,   200,   200,   200,   200,   200,   200,   200,   200,   200};
+	array<int, NUM_TESTS> gens 				  = {5000,  5000,  5000,  5000,  5000,  5000,  5000,  5000,  5000,  5000,     5000,  5000,  5000,  5000,  5000,  5000,  5000,  5000,  5000,  5000};
+	array<int, NUM_TESTS> days	 			  = {365,   365,   365,   365,   365,   365,   365,   365,   365,   365,      1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000,  1000};
 	array<float, NUM_TESTS> crossover_rates   = {0.75,  0.75,  0.75,  0.75,  0.25,  0.75,  0.75,  0.75,  0.75,  0.25,     0.75,  0.75,  0.75,  0.75,  0.25,  0.75,  0.75,  0.75,  0.75,  0.25};
 	array<float, NUM_TESTS> mutation_rates    = {0.001, 0.001, 0.001, 0.01,  0.001, 0.001, 0.001, 0.001, 0.01,  0.001,    0.001, 0.001, 0.001, 0.01,  0.001, 0.001, 0.001, 0.001, 0.01,  0.001};
-	//gate string type check behind bool flag isCreature check in genalg
+	*/
 
-	for (int i=9; i<10; i++) {
+int main(int argc, char *argv[]) {
+	array<int, NUM_TESTS> eater_pop_sizes     = {30,    30,    30,    30};
+	array<int, NUM_TESTS> plant_pop_sizes     = {0,     10,    0,     10};
+	array<int, NUM_TESTS> apex_pop_sizes      = {16,    16,    16,    16};
+	array<int, NUM_TESTS> gens 				  = {1000,  1000,  1000,  1000};
+	array<int, NUM_TESTS> days	 			  = {365,   365,   365,   365};
+	array<float, NUM_TESTS> crossover_rates   = {0.75,  0.75,  0.75,  0.75};
+	array<float, NUM_TESTS> mutation_rates    = {0.000, 0.000, 0.001, 0.001};
+	
+
+	for (int i=0; i<NUM_TESTS; i++) {
 
 		if (argc < 2) { 
 			//time based seed (randomish)
@@ -40,7 +48,11 @@ int main(int argc, char *argv[]) {			//	--------------------------------etrs----
 		GenAlgGame *game1 = new GenAlgGame(eater_pop_sizes[i], plant_pop_sizes[i], apex_pop_sizes[i]);
 		game1->SetGeneticParams(crossover_rates[i], mutation_rates[i], 0.000);
 		for(int g=0; g<gens[i]; g++) {
+			auto bef_gen = std::chrono::high_resolution_clock::now();
 			game1->Generation(days[i]);
+			auto after_gen = std::chrono::high_resolution_clock::now();
+			int gen_time = std::chrono::duration_cast<std::chrono::microseconds>(after_gen-bef_gen).count();
+			game1->gen_times.push_back(gen_time);
 		}
 		auto after_game = std::chrono::high_resolution_clock::now();
 		std::cout << "Game " << i << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(after_game-bef_game).count() << "ms\n";
@@ -50,7 +62,8 @@ int main(int argc, char *argv[]) {			//	--------------------------------etrs----
 						<< game1->avg_eater_fitness[g] << "," \
 						<< game1->max_apex_fitness[g]  << "," \
 						<< game1->avg_apex_fitness[g]  << ","  \
-						<< game1->plant_count[g] << "\n";
+						<< game1->plant_count[g] << "," \
+						<< game1->gen_times[g] << "\n";
 		}
 		f.close();
 

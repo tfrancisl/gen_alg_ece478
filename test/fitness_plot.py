@@ -48,3 +48,4 @@ make_plot(data['generation'], data['avg_fitness_apex'], "Average apex fitness ov
 make_plot(data['generation'], data['max_fitness'], "Max eater fitness over generations", "eater_max_fitness.png")
 make_plot(data['generation'], data['max_fitness_apex'], "Max eater fitness over generations", "apex_max_fitness.png")
 make_plot(data['generation'], data['total_plants'], "Plant count on final day", "plants.png")
+make_plot(data['generation'], data['gen_time'], "Time per generation in microseconds", "times.png")

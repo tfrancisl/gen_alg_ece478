@@ -4,6 +4,9 @@
 using std::bitset;
 using std::vector;
 
+
+//optimization idea: there should be a way to generate a random number such that the 0.1% mutation rate applies in the case of bitwise or (or some other operator) against the genome
+
 template<int gene_len, int gene_count>
 void Mutate(bitset<gene_len*gene_count> &bits, float mutation_rate) {
 	for (int i=0; i<(gene_len*gene_count); i++) {

@@ -25,6 +25,7 @@ public:
     vector<float> avg_eater_fitness;
     vector<float> avg_apex_fitness;
     vector<float> plant_count;
+    vector<float> gen_times;
 
     array<array<Entity, WORLD_SIZE>, WORLD_SIZE> *world;
 
