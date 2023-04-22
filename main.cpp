@@ -20,12 +20,12 @@ vector<string> WorldToStrings(array<array<Entity, WORLD_SIZE>, WORLD_SIZE> w);
 
 int main(int argc, char *argv[]) {
 	array<int, NUM_TESTS> eater_pop_sizes     = {30,    30,    30,    30};
-	array<int, NUM_TESTS> plant_pop_sizes     = {0,     10,    0,     10};
+	array<int, NUM_TESTS> plant_pop_sizes     = {50,    50,    50,    50};
 	array<int, NUM_TESTS> apex_pop_sizes      = {16,    16,    16,    16};
-	array<int, NUM_TESTS> gens 				  = {1000,  1000,  1000,  1000};
+	array<int, NUM_TESTS> gens 				  = {2500,  2500,  2500,  2500};
 	array<int, NUM_TESTS> days	 			  = {365,   365,   365,   365};
 	array<float, NUM_TESTS> crossover_rates   = {0.75,  0.75,  0.75,  0.75};
-	array<float, NUM_TESTS> mutation_rates    = {0.000, 0.000, 0.001, 0.001};
+	array<float, NUM_TESTS> mutation_rates    = {0.001, 0.001, 0.001, 0.001};
 	
 
 	for (int i=0; i<NUM_TESTS; i++) {
@@ -39,14 +39,14 @@ int main(int argc, char *argv[]) {
 		}
 
 		ofstream f;
-		string fn = "test" + std::to_string(i) + ".csv";
+		string fn = "test" + std::to_string(i) + "_" + argv[2] + ".csv";
 
 		f.open(fn, std::ios::out);
-		f << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex,total_plants\n";
+		f << "generation,max_fitness,avg_fitness,max_fitness_apex,avg_fitness_apex,total_plants,gen_time\n";
 		auto bef_game = std::chrono::high_resolution_clock::now();
 
 		GenAlgGame *game1 = new GenAlgGame(eater_pop_sizes[i], plant_pop_sizes[i], apex_pop_sizes[i]);
-		game1->SetGeneticParams(crossover_rates[i], mutation_rates[i], 0.000);
+		game1->SetGeneticParams(crossover_rates[i], mutation_rates[i], 0.001);
 		for(int g=0; g<gens[i]; g++) {
 			auto bef_gen = std::chrono::high_resolution_clock::now();
 			game1->Generation(days[i]);
